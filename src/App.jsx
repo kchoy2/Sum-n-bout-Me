@@ -314,49 +314,74 @@ function LocalGame({ onBack }) {
  if (phase === 'playing') {
    const currentCard = deck[currentCardIndex];
    const currentPlayer = players[turnIndex % players.length];
+   const nextTurnPlayer = players[(turnIndex + 1) % players.length];
+  
+   let bgStyle = "bg-gray-900";
+   if (turnState === 'correct') bgStyle = "bg-green-600";
+   if (turnState === 'incorrect') bgStyle = "bg-red-600";
+  
    return (
-     <div className={`fixed inset-0 w-full h-full overflow-y-auto ${turnState === 'correct' ? 'bg-green-600' : turnState === 'incorrect' ? 'bg-red-600' : 'bg-gray-900'} transition-colors duration-500`}>
+     <div className={`fixed inset-0 w-full h-full overflow-y-auto ${bgStyle} transition-colors duration-500`}>
        <div className="min-h-full flex flex-col justify-center p-4">
-         <div className="w-full max-w-md mx-auto space-y-6">
-             <div className="text-center"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {currentCardIndex + 1} of {deck.length}</span></div>
-             <div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[400px] flex flex-col">
-                 <div className="p-8 bg-gray-50 border-b"><p className="text-2xl font-black text-center text-gray-800">"{currentCard.text}"</p></div>
-                 <div className="flex-1 p-6 flex flex-col justify-center">
-                     {turnState === 'guessing' && (
-                         <>
-                             <div className="bg-orange-50 p-3 rounded-xl mb-4 text-center">
-                                 <p className="text-2xl font-black text-orange-700">{currentPlayer.name} is guessing</p>
-                             </div>
-                             <p className="text-center text-gray-500 font-bold mb-2">This Sum'n 'bout who?</p>
-                             <div className="grid grid-cols-2 gap-2 mb-4">
-                                 {players.map(p => (
-                                     <button key={p.id} onClick={() => setSelectedGuessedPlayer(p)} className={`p-2 rounded-lg font-bold text-sm border ${selectedGuessedPlayer?.id === p.id ? 'bg-orange-600 text-white' : 'bg-white text-gray-700'}`}>
-                                         {p.name}
-                                     </button>
-                                 ))}
-                             </div>
-                             <button onClick={handleGuess} disabled={!selectedGuessedPlayer} className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl disabled:opacity-50">Confirm Guess</button>
-                         </>
-                     )}
-                     {turnState !== 'guessing' && (
-                         <div className="text-center space-y-4 animate-in fade-in zoom-in">
-                             <div className={`inline-block p-4 rounded-full ${turnState === 'correct' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                                 {turnState === 'correct' ? <ThumbsUp size={32}/> : <XCircle size={32}/>}
-                             </div>
-                             <h2 className={`text-2xl font-black ${turnState === 'correct' ? 'text-green-600' : 'text-red-600'}`}>
-                                 {turnState === 'correct' ? "That's Sum'n 'bout Me!" : `That's not Sum'n 'bout ${lastResult.target}!`}
-                             </h2>
-                             {turnState === 'incorrect' && <p className="text-gray-500">Back to the bowl!</p>}
-                             {turnState === 'correct' && (
-                                 <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 mt-4 w-full">
-                                     <p className="text-xs text-orange-600">Spill the beans! Tell the story.</p>
-                                 </div>
-                             )}
-                             <button onClick={nextTurn} className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl mt-4">{turnState === 'correct' ? 'Next Secret' : 'Try Another Secret'}</button>
-                         </div>
-                     )}
-                 </div>
+         <div className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-blob"></div>
+         <div className="relative w-full max-w-md mx-auto z-10 space-y-6">
+           <div className="text-center mb-6"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {currentCardIndex + 1} of {deck.length}</span></div>
+           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[500px] flex flex-col">
+            
+             {/* Turn Indicator (Top) - SAME AS ONLINE */}
+             <div className="p-4 bg-orange-50 border-b flex items-center justify-center gap-2">
+                 <span className="text-xl font-black text-orange-700">{currentPlayer.name} is guessing</span>
              </div>
+
+
+             {/* Secret Card Area (Middle) */}
+             <div className="p-8 flex-1 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 border-b">
+                 <p className="text-2xl md:text-3xl font-black text-center text-gray-800 leading-tight">"{currentCard.text}"</p>
+             </div>
+
+
+             {/* Interaction Area (Bottom) */}
+             <div className="flex-none p-6 bg-gray-50">
+               {turnState === 'guessing' && (
+                 <div className="flex flex-col gap-4">
+                    <p className="text-center text-gray-500 font-bold uppercase text-xs tracking-wider">This Sum'n 'bout who?</p>
+                    <div className="grid grid-cols-2 gap-2">
+                       {players.map(p => (
+                         <button
+                           key={p.id}
+                           onClick={() => setSelectedGuessedPlayer(p)}
+                           className={`p-3 rounded-xl font-bold text-sm border transition-all
+                             ${selectedGuessedPlayer?.id === p.id ? 'bg-orange-600 text-white transform scale-105 shadow-md' : 'bg-white text-gray-700 hover:bg-orange-50 border border-gray-200'}
+                           `}
+                         >
+                           {p.name}
+                           {selectedGuessedPlayer?.id === p.id && <CheckCircle size={18} />}
+                         </button>
+                       ))}
+                    </div>
+                   
+                    <button onClick={handleGuess} disabled={!selectedGuessedPlayer} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition">Confirm Guess</button>
+                 </div>
+               )}
+               {turnState === 'correct' && (
+                 <div className="flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-8 duration-500">
+                     <div className="mb-4 bg-green-100 p-4 rounded-full"><ThumbsUp className="w-12 h-12 text-green-600" /></div>
+                     <div className="mb-6"><h2 className="text-3xl font-black text-green-600">That's Sum'n 'bout {currentCard.owner}!</h2></div>
+                     <div className="bg-purple-50 p-4 rounded-xl border-2 border-purple-100 mb-6 w-full"><div className="flex items-center justify-center gap-2 text-purple-600 font-bold mb-1"><Mic size={20} /> Story Time</div><p className="text-sm text-purple-800">Spill the beans! Tell the group the story.</p></div>
+                     <button onClick={nextTurn} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-700 transform active:scale-95 transition flex items-center justify-center gap-2">Next Secret <ArrowRight size={20} /></button>
+                     <p className="text-white/60 text-xs mt-3">Up Next: {nextTurnPlayer ? nextTurnPlayer.name : "..."}</p>
+                 </div>
+               )}
+               {turnState === 'incorrect' && (
+                 <div className="flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">
+                     <div className="mb-6 bg-red-100 p-4 rounded-full"><XCircle className="w-12 h-12 text-red-600" /></div>
+                     <div className="mb-6"><h2 className="text-2xl font-black text-red-600 leading-tight">That's not Sum'n 'bout {lastResult.target}!</h2></div>
+                     <button onClick={nextTurn} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-gray-800 transform active:scale-95 transition">Try Another Secret</button>
+                     <p className="text-white/60 text-xs mt-3">Up Next: {nextTurnPlayer ? nextTurnPlayer.name : "..."}</p>
+                 </div>
+               )}
+             </div>
+           </div>
          </div>
        </div>
      </div>
@@ -365,15 +390,21 @@ function LocalGame({ onBack }) {
 
 
  // Finished Phase
- if (gameState.phase === 'finished') {
+ if (phase === 'finished') {
    return (
      <div className="fixed inset-0 w-full h-full overflow-y-auto bg-indigo-600">
        <div className="min-h-full flex flex-col justify-center p-4">
          <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 text-center space-y-6">
              <h1 className="text-3xl font-black text-gray-800">That's Sum'n 'bout E'erbody!</h1>
              <p className="text-gray-500 italic">"{randomGameOverLine}"</p>
-             <button onClick={resetGame} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl">Play Again</button>
-             <button onClick={handleLeave} className="w-full text-gray-400 font-bold py-3">Back to Home</button>
+             <div className="grid grid-cols-2 gap-4">
+                <div className="bg-indigo-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-indigo-600">{players.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Friends</span></div>
+                <div className="bg-purple-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-purple-600">{deck.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Secrets</span></div>
+             </div>
+             <div className="space-y-3">
+               <button onClick={() => setPhase('lobby')} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl">Play Again</button>
+               <button onClick={onBack} className="w-full text-gray-400 font-bold py-3">Back to Home</button>
+             </div>
          </div>
        </div>
      </div>
@@ -746,7 +777,7 @@ function OnlineGame({ onSwitchToLocal }) {
        <div className="min-h-full flex flex-col justify-center p-4">
          <div className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-blob"></div>
          <div className="relative w-full max-w-md mx-auto z-10 space-y-6">
-           <div className="text-center mb-6"><span className="bg-black/30 text-white px-4 py-1 rounded-full text-sm font-medium backdrop-blur-sm">Secret {gameState.currentCardIndex + 1} of {gameState.deck.length}</span></div>
+           <div className="text-center mb-6"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {gameState.currentCardIndex + 1} of {gameState.deck.length}</span></div>
            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[500px] flex flex-col">
             
              {/* Turn Indicator moved to top */}
@@ -795,7 +826,7 @@ function OnlineGame({ onSwitchToLocal }) {
                {turnState === 'correct' && (
                  <div className="flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-8 duration-500">
                      <div className="mb-4 bg-green-100 p-4 rounded-full"><ThumbsUp className="w-12 h-12 text-green-600" /></div>
-                     <div className="mb-6"><h2 className="text-3xl font-black text-green-600">That's Sum'n 'bout Me!</h2></div>
+                     <div className="mb-6"><h2 className="text-3xl font-black text-green-600">That's Sum'n 'bout {currentCard.owner}!</h2></div>
                      <div className="bg-purple-50 p-4 rounded-xl border-2 border-purple-100 mb-6 w-full"><div className="flex items-center justify-center gap-2 text-purple-600 font-bold mb-1"><Mic size={20} /> Story Time</div><p className="text-sm text-purple-800">Spill the beans! Tell the group the story.</p></div>
                      <button onClick={handleNextAfterResult} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-700 transform active:scale-95 transition flex items-center justify-center gap-2">Next Secret <ArrowRight size={20} /></button>
                      <p className="text-white/60 text-xs mt-3">Up Next: {nextTurnPlayer ? nextTurnPlayer.name : "..."}</p>
@@ -805,7 +836,6 @@ function OnlineGame({ onSwitchToLocal }) {
                  <div className="flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">
                      <div className="mb-6 bg-red-100 p-4 rounded-full"><XCircle className="w-12 h-12 text-red-600" /></div>
                      <div className="mb-6"><h2 className="text-2xl font-black text-red-600 leading-tight">That's not Sum'n 'bout {gameState.lastGuessedName}!</h2></div>
-                     <p className="text-gray-500 mb-8 text-sm">Back to the bowl it goes!</p>
                      <button onClick={handleNextAfterResult} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-gray-800 transform active:scale-95 transition">Try Another Secret</button>
                      <p className="text-white/60 text-xs mt-3">Up Next: {nextTurnPlayer ? nextTurnPlayer.name : "..."}</p>
                  </div>
@@ -827,8 +857,14 @@ function OnlineGame({ onSwitchToLocal }) {
          <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 text-center space-y-6">
              <h1 className="text-3xl font-black text-gray-800">That's Sum'n 'bout E'erbody!</h1>
              <p className="text-gray-500 italic">"{randomGameOverLine}"</p>
-             <button onClick={resetGame} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl">Play Again</button>
-             <button onClick={handleLeave} className="w-full text-gray-400 font-bold py-3">Back to Home</button>
+             <div className="grid grid-cols-2 gap-4">
+                <div className="bg-indigo-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-indigo-600">{gameState.players.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Friends</span></div>
+                <div className="bg-purple-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-purple-600">{gameState.deck.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Secrets</span></div>
+             </div>
+             <div className="space-y-3">
+               <button onClick={resetGame} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl">Play Again</button>
+               <button onClick={handleLeave} className="w-full text-gray-400 font-bold py-3">Back to Home</button>
+             </div>
          </div>
        </div>
      </div>
