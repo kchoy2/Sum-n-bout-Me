@@ -348,12 +348,11 @@ function LocalGame({ onBack }) {
                              </h2>
                              {turnState === 'incorrect' && <p className="text-gray-500">Back to the bowl!</p>}
                              {turnState === 'correct' && (
-                                 <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
-                                     <p className="text-orange-800 text-sm font-bold">Correct! It was {currentCard.owner}.</p>
-                                     <p className="text-xs text-orange-600 mt-1">Spill the beans! Tell the story.</p>
+                                 <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 mt-4 w-full">
+                                     <p className="text-xs text-orange-600">Spill the beans! Tell the story.</p>
                                  </div>
                              )}
-                             <button onClick={nextTurn} className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl">Next Turn</button>
+                             <button onClick={nextTurn} className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl mt-4">{turnState === 'correct' ? 'Next Secret' : 'Try Another Secret'}</button>
                          </div>
                      )}
                  </div>
@@ -365,15 +364,16 @@ function LocalGame({ onBack }) {
  }
 
 
- if (phase === 'finished') {
+ // Finished Phase
+ if (gameState.phase === 'finished') {
    return (
      <div className="fixed inset-0 w-full h-full overflow-y-auto bg-indigo-600">
        <div className="min-h-full flex flex-col justify-center p-4">
          <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 text-center space-y-6">
              <h1 className="text-3xl font-black text-gray-800">That's Sum'n 'bout E'erbody!</h1>
              <p className="text-gray-500 italic">"{randomGameOverLine}"</p>
-             <button onClick={() => setPhase('lobby')} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl">Play Again</button>
-             <button onClick={onBack} className="w-full text-gray-400 font-bold py-3">Back to Home</button>
+             <button onClick={resetGame} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl">Play Again</button>
+             <button onClick={handleLeave} className="w-full text-gray-400 font-bold py-3">Back to Home</button>
          </div>
        </div>
      </div>
@@ -795,8 +795,7 @@ function OnlineGame({ onSwitchToLocal }) {
                {turnState === 'correct' && (
                  <div className="flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-8 duration-500">
                      <div className="mb-4 bg-green-100 p-4 rounded-full"><ThumbsUp className="w-12 h-12 text-green-600" /></div>
-                     <div className="mb-6"><p className="text-sm font-bold text-green-700 opacity-80 uppercase tracking-widest mb-1">{gameState.guesserName} guessed {gameState.lastGuessedName}</p><h2 className="text-3xl font-black text-green-600">That's Sum'n 'bout Me!</h2></div>
-                     <p className="text-gray-600 text-lg mb-2">Correct! It was <strong className="text-gray-900">{currentCard.owner}</strong>.</p>
+                     <div className="mb-6"><h2 className="text-3xl font-black text-green-600">That's Sum'n 'bout Me!</h2></div>
                      <div className="bg-purple-50 p-4 rounded-xl border-2 border-purple-100 mb-6 w-full"><div className="flex items-center justify-center gap-2 text-purple-600 font-bold mb-1"><Mic size={20} /> Story Time</div><p className="text-sm text-purple-800">Spill the beans! Tell the group the story.</p></div>
                      <button onClick={handleNextAfterResult} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-700 transform active:scale-95 transition flex items-center justify-center gap-2">Next Secret <ArrowRight size={20} /></button>
                      <p className="text-white/60 text-xs mt-3">Up Next: {nextTurnPlayer ? nextTurnPlayer.name : "..."}</p>
@@ -805,9 +804,9 @@ function OnlineGame({ onSwitchToLocal }) {
                {turnState === 'incorrect' && (
                  <div className="flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">
                      <div className="mb-6 bg-red-100 p-4 rounded-full"><XCircle className="w-12 h-12 text-red-600" /></div>
-                     <div className="mb-6"><p className="text-sm font-bold text-red-300 opacity-80 uppercase tracking-widest mb-1">{gameState.guesserName} guessed {gameState.lastGuessedName}</p><h2 className="text-2xl font-black text-red-600 leading-tight">That's not Sum'n 'bout {gameState.lastGuessedName}!</h2></div>
+                     <div className="mb-6"><h2 className="text-2xl font-black text-red-600 leading-tight">That's not Sum'n 'bout {gameState.lastGuessedName}!</h2></div>
                      <p className="text-gray-500 mb-8 text-sm">Back to the bowl it goes!</p>
-                     <button onClick={handleNextAfterResult} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-gray-800 transform active:scale-95 transition">Try Another Fact</button>
+                     <button onClick={handleNextAfterResult} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-gray-800 transform active:scale-95 transition">Try Another Secret</button>
                      <p className="text-white/60 text-xs mt-3">Up Next: {nextTurnPlayer ? nextTurnPlayer.name : "..."}</p>
                  </div>
                )}
@@ -847,4 +846,3 @@ export default function App() {
  }
  return <OnlineGame onSwitchToLocal={() => setMode('local')} />;
 }
-
