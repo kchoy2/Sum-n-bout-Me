@@ -818,4 +818,3 @@ export default function App() {
  }
  return <OnlineGame onSwitchToLocal={() => setMode('local')} />;
 }
-
