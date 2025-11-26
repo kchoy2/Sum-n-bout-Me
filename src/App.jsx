@@ -89,6 +89,54 @@ const FUNNY_GAME_OVER_LINES = [
 ];
 
 
+// --- CUSTOM CONFETTI COMPONENT ---
+const Confetti = () => {
+ const [particles, setParticles] = useState([]);
+
+
+ useEffect(() => {
+   const colors = ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#a855f7', '#ec4899'];
+   const newParticles = [];
+   for(let i=0; i<50; i++) {
+     newParticles.push({
+       id: i,
+       x: Math.random() * 100,
+       color: colors[Math.floor(Math.random() * colors.length)],
+       delay: Math.random() * 0.5,
+       duration: 2 + Math.random() * 2,
+       rotation: Math.random() * 360
+     });
+   }
+   setParticles(newParticles);
+ }, []);
+
+
+ return (
+   <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
+     <style>{`
+       @keyframes fall {
+         0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+         100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+       }
+     `}</style>
+     {particles.map(p => (
+       <div
+         key={p.id}
+         className="absolute w-3 h-3 rounded-sm"
+         style={{
+           left: `${p.x}%`,
+           top: `-20px`,
+           backgroundColor: p.color,
+           transform: `rotate(${p.rotation}deg)`,
+           animation: `fall ${p.duration}s linear ${p.delay}s forwards`
+         }}
+       />
+     ))}
+   </div>
+ );
+};
+
+
 // --- LOCAL PASS-N-PLAY COMPONENT ---
 function LocalGame({ onBack }) {
  const [phase, setPhase] = useState('lobby');
@@ -314,7 +362,6 @@ function LocalGame({ onBack }) {
  if (phase === 'playing') {
    const currentCard = deck[currentCardIndex];
    const currentPlayer = players[turnIndex % players.length];
-   const nextTurnPlayer = players[(turnIndex + 1) % players.length];
   
    let bgStyle = "bg-gray-900";
    if (turnState === 'correct') bgStyle = "bg-green-600";
@@ -328,19 +375,16 @@ function LocalGame({ onBack }) {
            <div className="text-center mb-6"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {currentCardIndex + 1} of {deck.length}</span></div>
            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[500px] flex flex-col">
             
-             {/* Turn Indicator (Top) - SAME AS ONLINE */}
              <div className="p-4 bg-orange-50 border-b flex items-center justify-center gap-2">
                  <span className="text-xl font-black text-orange-700">{currentPlayer.name} is guessing</span>
              </div>
 
 
-             {/* Secret Card Area (Middle) */}
              <div className="p-8 flex-1 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 border-b">
                  <p className="text-2xl md:text-3xl font-black text-center text-gray-800 leading-tight">"{currentCard.text}"</p>
              </div>
 
 
-             {/* Interaction Area (Bottom) */}
              <div className="flex-none p-6 bg-gray-50">
                {turnState === 'guessing' && (
                  <div className="flex flex-col gap-4">
@@ -365,11 +409,11 @@ function LocalGame({ onBack }) {
                )}
                {turnState === 'correct' && (
                  <div className="flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-8 duration-500">
+                     <Confetti />
                      <div className="mb-4 bg-green-100 p-4 rounded-full"><ThumbsUp className="w-12 h-12 text-green-600" /></div>
                      <div className="mb-6"><h2 className="text-3xl font-black text-green-600">That's Sum'n 'bout {currentCard.owner}!</h2></div>
                      <div className="bg-purple-50 p-4 rounded-xl border-2 border-purple-100 mb-6 w-full"><div className="flex items-center justify-center gap-2 text-purple-600 font-bold mb-1"><Mic size={20} /> Story Time</div><p className="text-sm text-purple-800">Spill the beans! Tell the group the story.</p></div>
                      <button onClick={nextTurn} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-700 transform active:scale-95 transition flex items-center justify-center gap-2">Next Secret <ArrowRight size={20} /></button>
-                     <p className="text-white/60 text-xs mt-3">Up Next: {nextTurnPlayer ? nextTurnPlayer.name : "..."}</p>
                  </div>
                )}
                {turnState === 'incorrect' && (
@@ -377,7 +421,6 @@ function LocalGame({ onBack }) {
                      <div className="mb-6 bg-red-100 p-4 rounded-full"><XCircle className="w-12 h-12 text-red-600" /></div>
                      <div className="mb-6"><h2 className="text-2xl font-black text-red-600 leading-tight">That's not Sum'n 'bout {lastResult.target}!</h2></div>
                      <button onClick={nextTurn} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-gray-800 transform active:scale-95 transition">Try Another Secret</button>
-                     <p className="text-white/60 text-xs mt-3">Up Next: {nextTurnPlayer ? nextTurnPlayer.name : "..."}</p>
                  </div>
                )}
              </div>
@@ -777,7 +820,7 @@ function OnlineGame({ onSwitchToLocal }) {
        <div className="min-h-full flex flex-col justify-center p-4">
          <div className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-blob"></div>
          <div className="relative w-full max-w-md mx-auto z-10 space-y-6">
-           <div className="text-center mb-6"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {gameState.currentCardIndex + 1} of {gameState.deck.length}</span></div>
+           <div className="text-center mb-6"><span className="bg-black/30 text-white px-4 py-1 rounded-full text-sm font-medium backdrop-blur-sm">Secret {gameState.currentCardIndex + 1} of {gameState.deck.length}</span></div>
            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[500px] flex flex-col">
             
              {/* Turn Indicator moved to top */}
@@ -825,11 +868,11 @@ function OnlineGame({ onSwitchToLocal }) {
                )}
                {turnState === 'correct' && (
                  <div className="flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-8 duration-500">
+                     <Confetti /> {/* CELEBRATION! */}
                      <div className="mb-4 bg-green-100 p-4 rounded-full"><ThumbsUp className="w-12 h-12 text-green-600" /></div>
                      <div className="mb-6"><h2 className="text-3xl font-black text-green-600">That's Sum'n 'bout {currentCard.owner}!</h2></div>
                      <div className="bg-purple-50 p-4 rounded-xl border-2 border-purple-100 mb-6 w-full"><div className="flex items-center justify-center gap-2 text-purple-600 font-bold mb-1"><Mic size={20} /> Story Time</div><p className="text-sm text-purple-800">Spill the beans! Tell the group the story.</p></div>
                      <button onClick={handleNextAfterResult} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-700 transform active:scale-95 transition flex items-center justify-center gap-2">Next Secret <ArrowRight size={20} /></button>
-                     <p className="text-white/60 text-xs mt-3">Up Next: {nextTurnPlayer ? nextTurnPlayer.name : "..."}</p>
                  </div>
                )}
                {turnState === 'incorrect' && (
@@ -837,7 +880,6 @@ function OnlineGame({ onSwitchToLocal }) {
                      <div className="mb-6 bg-red-100 p-4 rounded-full"><XCircle className="w-12 h-12 text-red-600" /></div>
                      <div className="mb-6"><h2 className="text-2xl font-black text-red-600 leading-tight">That's not Sum'n 'bout {gameState.lastGuessedName}!</h2></div>
                      <button onClick={handleNextAfterResult} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-gray-800 transform active:scale-95 transition">Try Another Secret</button>
-                     <p className="text-white/60 text-xs mt-3">Up Next: {nextTurnPlayer ? nextTurnPlayer.name : "..."}</p>
                  </div>
                )}
              </div>
