@@ -207,7 +207,7 @@ function LocalGame({ onBack }) {
  // --- Local Renders ---
  if (phase === 'lobby') {
    return (
-     <div className="min-h-screen bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center p-4 font-sans">
+     <div className="min-h-screen w-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center p-4 font-sans">
        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
          <div className="text-center mb-6">
             <div className="inline-block p-3 bg-orange-100 rounded-full mb-2"><Smartphone size={32} className="text-orange-600"/></div>
@@ -266,7 +266,7 @@ function LocalGame({ onBack }) {
 
  if (phase === 'pre_game') {
    return (
-     <div className="min-h-screen bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center p-4 text-center">
+     <div className="min-h-screen w-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center p-4 text-center">
        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 space-y-6 animate-in zoom-in">
            <div className="flex justify-center"><div className="bg-green-100 p-4 rounded-full"><Lock size={48} className="text-green-600"/></div></div>
            <div>
@@ -285,7 +285,7 @@ function LocalGame({ onBack }) {
  if (phase === 'input') {
    const currentPlayer = players[currentPlayerInputIndex];
    return (
-     <div className="min-h-screen bg-orange-50 flex items-center justify-center p-4">
+     <div className="min-h-screen w-full bg-orange-50 flex items-center justify-center p-4">
        <div className="w-full max-w-md space-y-6">
          <div className="bg-white p-6 rounded-2xl shadow-sm text-center">
             <h2 className="text-xl font-bold text-gray-500 uppercase tracking-widest mb-1">Player {currentPlayerInputIndex + 1} / {players.length}</h2>
@@ -307,28 +307,37 @@ function LocalGame({ onBack }) {
    const currentCard = deck[currentCardIndex];
    const currentPlayer = players[turnIndex % players.length];
    return (
-     <div className={`min-h-screen ${turnState === 'correct' ? 'bg-green-600' : turnState === 'incorrect' ? 'bg-red-600' : 'bg-gray-900'} flex items-center justify-center p-4 transition-colors duration-500`}>
+     <div className={`min-h-screen w-full ${turnState === 'correct' ? 'bg-green-600' : turnState === 'incorrect' ? 'bg-red-600' : 'bg-gray-900'} flex items-center justify-center p-4 transition-colors duration-500`}>
        <div className="w-full max-w-md space-y-6">
            <div className="text-center"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {currentCardIndex + 1} of {deck.length}</span></div>
            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[400px] flex flex-col">
-               <div className="p-8 bg-gray-50 border-b"><p className="text-2xl font-black text-center text-gray-800">"{currentCard.text}"</p></div>
-               <div className="flex-1 p-6 flex flex-col justify-center">
+               {/* Turn Indicator moved to top */}
+               <div className="p-4 bg-orange-50 border-b flex items-center justify-center gap-2">
+                   <span className="text-orange-800 text-sm font-bold uppercase tracking-wider">Turn:</span>
+                   <span className="text-xl font-black text-orange-700">{currentPlayer.name} is guessing</span>
+               </div>
+
+
+               {/* Secret Card Area - Now in Middle */}
+               <div className="p-8 flex-1 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 border-b">
+                   <p className="text-2xl md:text-3xl font-black text-center text-gray-800 leading-tight">"{currentCard.text}"</p>
+               </div>
+
+
+               {/* Interaction Area */}
+               <div className="flex-none p-6 bg-gray-50">
                    {turnState === 'guessing' && (
-                       <>
-                           <div className="bg-orange-50 p-3 rounded-xl mb-4 text-center">
-                               <p className="text-orange-800 text-xs font-bold uppercase">Turn</p>
-                               <p className="text-2xl font-black text-orange-700">{currentPlayer.name}</p>
-                           </div>
-                           <p className="text-center text-gray-500 font-bold mb-2">This Sum'n 'bout who?</p>
-                           <div className="grid grid-cols-2 gap-2 mb-4">
+                       <div className="flex flex-col gap-4">
+                           <p className="text-center text-gray-500 font-bold uppercase text-xs tracking-wider">This Sum'n 'bout who?</p>
+                           <div className="grid grid-cols-2 gap-2">
                                {players.map(p => (
-                                   <button key={p.id} onClick={() => setSelectedGuessedPlayer(p)} className={`p-2 rounded-lg font-bold text-sm border ${selectedGuessedPlayer?.id === p.id ? 'bg-orange-600 text-white' : 'bg-white text-gray-700'}`}>
+                                   <button key={p.id} onClick={() => setSelectedGuessedPlayer(p)} className={`p-3 rounded-xl font-bold text-sm border transition-all ${selectedGuessedPlayer?.id === p.id ? 'bg-orange-600 text-white transform scale-105 shadow-md' : 'bg-white text-gray-700 hover:bg-orange-50 border border-gray-200'}`}>
                                        {p.name}
                                    </button>
                                ))}
                            </div>
-                           <button onClick={handleGuess} disabled={!selectedGuessedPlayer} className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl disabled:opacity-50">Confirm Guess</button>
-                       </>
+                           <button onClick={handleGuess} disabled={!selectedGuessedPlayer} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 active:scale-95 transition">Confirm Guess</button>
+                       </div>
                    )}
                    {turnState !== 'guessing' && (
                        <div className="text-center space-y-4 animate-in fade-in zoom-in">
@@ -345,7 +354,7 @@ function LocalGame({ onBack }) {
                                    <p className="text-xs text-orange-600 mt-1">Spill the beans! Tell the story.</p>
                                </div>
                            )}
-                           <button onClick={nextTurn} className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl">Next Turn</button>
+                           <button onClick={nextTurn} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition">{turnState === 'correct' ? 'Next Secret' : 'Try Another'}</button>
                        </div>
                    )}
                </div>
@@ -358,7 +367,7 @@ function LocalGame({ onBack }) {
 
  if (phase === 'finished') {
    return (
-     <div className="min-h-screen bg-indigo-600 flex items-center justify-center p-4">
+     <div className="min-h-screen w-full bg-indigo-600 flex items-center justify-center p-4">
        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 text-center space-y-6">
            <h1 className="text-3xl font-black text-gray-800">That's Sum'n 'bout E'erbody!</h1>
            <p className="text-gray-500 italic">"{randomGameOverLine}"</p>
@@ -576,7 +585,7 @@ function OnlineGame({ onSwitchToLocal }) {
  // --- Renders ---
  if (!user) {
    return (
-       <div className="min-h-screen bg-pink-50 flex flex-col items-center justify-center p-4 text-center font-sans">
+       <div className="min-h-screen w-full bg-pink-50 flex flex-col items-center justify-center p-4 text-center font-sans">
            <div className="mb-4 flex flex-col items-center">
                <Loader className="animate-spin text-purple-600 mb-2" size={32}/>
                <span className="text-purple-600 font-bold animate-pulse">Connecting to Party Server...</span>
@@ -596,7 +605,7 @@ function OnlineGame({ onSwitchToLocal }) {
 
  if (!joined) {
    return (
-     <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center p-4 font-sans">
+     <div className="min-h-screen w-full bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center p-4 font-sans">
        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md mx-auto">
          <div className="flex justify-center mb-4"><Sparkles className="w-12 h-12 text-purple-600" /></div>
          <h1 className="text-3xl font-black text-center text-gray-800 mb-2">Sum'n 'bout Me</h1>
@@ -632,7 +641,7 @@ function OnlineGame({ onSwitchToLocal }) {
    const players = gameState ? gameState.players : [];
    const isHost = gameState && gameState.hostId === user.uid;
    return (
-     <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+     <div className="min-h-screen w-full bg-gray-50 p-4 flex items-center justify-center">
        <div className="w-full max-w-md mx-auto space-y-6">
          <div className="bg-white rounded-xl shadow-sm p-6 text-center border-b-4 border-purple-200">
            <h2 className="text-xl font-bold text-gray-800">Room: {roomCode.toUpperCase()}</h2>
@@ -681,7 +690,7 @@ function OnlineGame({ onSwitchToLocal }) {
 
 
    return (
-     <div className="min-h-screen bg-purple-50 p-4 flex flex-col items-center justify-center">
+     <div className="min-h-screen w-full bg-purple-50 p-4 flex flex-col items-center justify-center">
        <div className="w-full max-w-md mx-auto flex flex-col space-y-6">
          <div className="bg-white p-6 rounded-2xl shadow-sm text-center">
             <div className="inline-block p-3 bg-purple-100 rounded-full mb-4"><HelpCircle className="w-8 h-8 text-purple-600" /></div>
@@ -725,27 +734,40 @@ function OnlineGame({ onSwitchToLocal }) {
    if (turnState === 'incorrect') bgStyle = "bg-red-600";
   
    return (
-     <div className={`min-h-screen ${bgStyle} transition-colors duration-500 p-4 flex flex-col items-center justify-center relative overflow-hidden`}>
+     <div className={`min-h-screen w-full ${bgStyle} transition-colors duration-500 p-4 flex flex-col items-center justify-center relative overflow-hidden`}>
        <div className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-blob"></div>
        <div className="relative w-full max-w-md mx-auto z-10">
          <div className="text-center mb-6"><span className="bg-black/30 text-white px-4 py-1 rounded-full text-sm font-medium backdrop-blur-sm">Secret {gameState.currentCardIndex + 1} of {gameState.deck.length}</span></div>
          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[500px] flex flex-col">
-           <div className="p-8 flex-shrink-0 bg-gradient-to-b from-white to-gray-50 border-b"><p className="text-2xl md:text-3xl font-black text-center text-gray-800 leading-tight">"{currentCard.text}"</p></div>
-           <div className="flex-1 p-6 bg-gray-50 flex flex-col">
+          
+           {/* Turn Indicator moved to top */}
+           <div className="p-4 bg-purple-50 border-b flex items-center justify-center gap-2">
+               <span className="text-purple-800 text-sm font-bold uppercase tracking-wider">Turn:</span>
+               <span className="text-xl font-black text-purple-700">{currentTurnPlayer ? currentTurnPlayer.name : "..."} is guessing</span>
+           </div>
+
+
+           {/* Secret Card Area - Now in Middle */}
+           <div className="p-8 flex-1 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 border-b">
+               <p className="text-2xl md:text-3xl font-black text-center text-gray-800 leading-tight">"{currentCard.text}"</p>
+           </div>
+
+
+           {/* Interaction Area */}
+           <div className="flex-none p-6 bg-gray-50">
              {turnState === 'guessing' && (
-               <div className="flex-1 flex flex-col">
-                  <div className="bg-purple-100 p-3 rounded-xl mb-4 text-center"><p className="text-purple-800 text-sm font-bold uppercase tracking-wider">Turn</p><p className="text-2xl font-black text-purple-700">{currentTurnPlayer ? currentTurnPlayer.name : "..."}</p></div>
-                  <p className="text-gray-500 font-bold text-center mb-4 uppercase text-xs tracking-wider">This Sum'n 'bout who?</p>
-                  <div className="flex-1 overflow-y-auto space-y-2 mb-4 max-h-[250px] pr-2">
+               <div className="flex flex-col gap-4">
+                  <p className="text-center text-gray-500 font-bold uppercase text-xs tracking-wider">This Sum'n 'bout who?</p>
+                  <div className="grid grid-cols-2 gap-2">
                      {gameState.players.map(p => (
-                       <button key={p.id} onClick={() => setSelectedGuessedPlayer(p)} className={`w-full p-3 rounded-xl text-left font-bold transition-all flex items-center justify-between ${selectedGuessedPlayer?.id === p.id ? 'bg-purple-600 text-white shadow-md transform scale-[1.02]' : 'bg-white text-gray-700 hover:bg-purple-50 border border-gray-200'}`}>{p.name}{selectedGuessedPlayer?.id === p.id && <CheckCircle size={18} />}</button>
+                       <button key={p.id} onClick={() => setSelectedGuessedPlayer(p)} className={`p-3 rounded-xl font-bold text-sm border transition-all ${selectedGuessedPlayer?.id === p.id ? 'bg-purple-600 text-white transform scale-105 shadow-md' : 'bg-white text-gray-700 hover:bg-purple-50 border border-gray-200'}`}>{p.name}{selectedGuessedPlayer?.id === p.id && <CheckCircle size={18} />}</button>
                      ))}
                   </div>
-                  <button onClick={handleGuess} disabled={!selectedGuessedPlayer} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">Confirm Guess</button>
+                  <button onClick={handleGuess} disabled={!selectedGuessedPlayer} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition">Confirm Guess</button>
                </div>
              )}
              {turnState === 'correct' && (
-               <div className="flex-1 flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-8 duration-500">
+               <div className="flex flex-col items-center justify-center text-center animate-in fade-in slide-in-from-bottom-8 duration-500">
                    <div className="mb-4 bg-green-100 p-4 rounded-full"><ThumbsUp className="w-12 h-12 text-green-600" /></div>
                    <div className="mb-6"><p className="text-sm font-bold text-green-700 opacity-80 uppercase tracking-widest mb-1">{gameState.guesserName} guessed {gameState.lastGuessedName}</p><h2 className="text-3xl font-black text-green-600">That's Sum'n 'bout Me!</h2></div>
                    <p className="text-gray-600 text-lg mb-2">Correct! It was <strong className="text-gray-900">{currentCard.owner}</strong>.</p>
@@ -774,7 +796,7 @@ function OnlineGame({ onSwitchToLocal }) {
  // Finished Phase
  if (gameState.phase === 'finished') {
    return (
-     <div className="min-h-screen bg-indigo-600 flex items-center justify-center p-4">
+     <div className="min-h-screen w-full bg-indigo-600 flex items-center justify-center p-4">
        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 text-center space-y-6">
            <h1 className="text-3xl font-black text-gray-800">That's Sum'n 'bout E'erbody!</h1>
            <p className="text-gray-500 italic">"{randomGameOverLine}"</p>
