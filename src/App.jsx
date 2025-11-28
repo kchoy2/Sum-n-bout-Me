@@ -59,8 +59,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = 'my-party-game-v1';
-// Optional: Add your Gemini API Key here if you deploy it!
-const GEMINI_API_KEY = "";
+const GEMINI_API_KEY = ""; // Add your key here for AI features
 
 
 // --- Constants ---
@@ -140,6 +139,20 @@ const FUNNY_GAME_OVER_LINES = [
 ];
 
 
+const WAITING_MESSAGES = [
+ "Waiting for {name} to use their brain...",
+ "{name} is sweating right now...",
+ "Is {name} asleep?",
+ "{name} is consulting the spirits...",
+ "Calculating... {name} is confused.",
+ "Don't hurt yourself thinking, {name}...",
+ "{name} is having a main character moment...",
+ "Loading {name}'s intuition...",
+ "Silence! {name} is thinking.",
+ "I bet {name} picks the wrong one."
+];
+
+
 // --- AI Helpers ---
 
 
@@ -152,10 +165,10 @@ const generateAICommentary = async (type, context = {}) => {
 
 
  switch (type) {
-   case 'start': prompt = `${style} The game "Sum'n 'bout Me" (a secret guessing game) just started. Hype it up.`; break;
-   case 'correct': prompt = `${style} ${context.guesser} just correctly guessed that the secret "${context.secret}" belonged to ${context.owner}. React with shock or validation.`; break;
-   case 'incorrect': prompt = `${style} ${context.guesser} incorrectly guessed that ${context.target} wrote the secret "${context.secret}". Roast them gently or make it awkward.`; break;
-   case 'next': prompt = `${style} We are moving to the next secret. Keep the momentum going.`; break;
+   case 'start': prompt = `${style} The game "Sum'n 'bout Me" just started. Hype it up.`; break;
+   case 'correct': prompt = `${style} ${context.guesser} correctly guessed the secret "${context.secret}" belonged to ${context.owner}. React with shock/validation.`; break;
+   case 'incorrect': prompt = `${style} ${context.guesser} incorrectly guessed that ${context.target} wrote "${context.secret}". Roast them gently.`; break;
+   case 'next': prompt = `${style} Moving to the next secret. Keep momentum.`; break;
    default: return getRandomFallback(type);
  }
 
@@ -177,7 +190,6 @@ const generateAICommentary = async (type, context = {}) => {
 
 const generateAISecretSuggestion = async () => {
  if (!GEMINI_API_KEY) {
-    // Fallback to the big list if no API key
     return SECRET_SUGGESTIONS[Math.floor(Math.random() * SECRET_SUGGESTIONS.length)];
  }
   const prompt = "Give me one funny, specific, safe-for-work 'Never have I ever' style fact or secret that someone might have. Examples: 'I've never eaten a taco', 'I own 50 rubber ducks'. Just the fact, no quotes.";
@@ -195,7 +207,7 @@ const generateAISecretSuggestion = async () => {
 };
 
 
-// Fallback Scripts (Updated Gen Z Tone)
+// Fallback Scripts
 const BOT_SCRIPTS = {
  start: [
    "The tea is hot today. Let's play.",
@@ -212,7 +224,7 @@ const BOT_SCRIPTS = {
    "Okay, that explains so much.",
    "The math is mathing.",
    "Exposed!",
-   "That is wild. Explain yourself.",
+   "That is wild.",
    "I am shook.",
    "Main character energy.",
    "Oop, caught in 4k.",
@@ -273,6 +285,21 @@ const Confetti = () => {
 };
 
 
+// Cycling waiting message component
+const CyclingWaitingMessage = ({ name }) => {
+ const [index, setIndex] = useState(0);
+ useEffect(() => {
+   const interval = setInterval(() => { setIndex((prev) => (prev + 1) % WAITING_MESSAGES.length); }, 3000);
+   return () => clearInterval(interval);
+ }, []);
+ return (
+   <div className="w-full bg-orange-50 text-orange-400 font-bold py-4 rounded-xl text-center animate-pulse border border-orange-100 text-sm">
+       {WAITING_MESSAGES[index].replace("{name}", name || "Player")}
+   </div>
+ );
+};
+
+
 function ChatPanel({ messages, onSendMessage, currentPlayerName, onClose, isMobile }) {
  const [text, setText] = useState('');
  const scrollRef = useRef(null);
@@ -285,14 +312,14 @@ function ChatPanel({ messages, onSendMessage, currentPlayerName, onClose, isMobi
 
  return (
    <div className="flex flex-col h-full bg-white">
-     <div className="p-3 border-b bg-purple-50 flex justify-between items-center">
-       <h3 className="font-bold text-purple-800 flex items-center gap-2 text-sm uppercase tracking-wider">
+     <div className="p-3 border-b bg-orange-50 flex justify-between items-center">
+       <h3 className="font-bold text-orange-800 flex items-center gap-2 text-sm uppercase tracking-wider">
            <MessageCircle size={16}/> Live Chat
        </h3>
-       {isMobile && <button onClick={onClose}><Minimize2 size={20} className="text-purple-400"/></button>}
+       {isMobile && <button onClick={onClose}><Minimize2 size={20} className="text-orange-400"/></button>}
      </div>
      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-white">
-       {messages.length === 0 && <div className="text-center text-gray-400 mt-10 text-sm italic">No messages yet. Start the tea! ☕️</div>}
+       {messages.length === 0 && <div className="text-center text-gray-400 mt-10 text-sm italic">No tea spilt yet. Say hi! ☕️</div>}
        {messages.map((msg, idx) => {
            const isBot = msg.sender === 'Sum\'n Bot 🤖';
            const isMe = msg.sender === currentPlayerName;
@@ -301,7 +328,7 @@ function ChatPanel({ messages, onSendMessage, currentPlayerName, onClose, isMobi
                {!isBot && !isMe && <span className="text-[10px] text-gray-400 ml-1 mb-0.5 uppercase font-bold">{msg.sender}</span>}
                <div className={`px-3 py-2 rounded-2xl max-w-[85%] text-sm shadow-sm ${
                  isBot ? 'bg-gray-100 text-gray-600 text-xs font-bold italic py-1 px-3 border border-gray-200' :
-                 isMe ? 'bg-purple-600 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none border border-gray-100'
+                 isMe ? 'bg-orange-500 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none border border-gray-100'
                }`}>
                  {msg.text}
                </div>
@@ -312,7 +339,7 @@ function ChatPanel({ messages, onSendMessage, currentPlayerName, onClose, isMobi
      <div className="p-3 border-t bg-gray-50">
          <div className="flex gap-2">
            <input
-               className="flex-1 bg-white border border-gray-300 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+               className="flex-1 bg-white border border-gray-300 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition"
                placeholder="Say sum'n..."
                value={text}
                onChange={(e) => setText(e.target.value)}
@@ -320,7 +347,7 @@ function ChatPanel({ messages, onSendMessage, currentPlayerName, onClose, isMobi
            />
            <button
                onClick={() => { if (text.trim()) { onSendMessage(text); setText(''); }}}
-               className="bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 shadow-md active:scale-95 transition"
+               className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 shadow-md active:scale-95 transition"
            >
                <Send size={18} />
            </button>
@@ -357,8 +384,7 @@ function LocalGame({ onBack }) {
   
    const getAISuggestion = async () => {
        setAiLoading(true);
-       // We use the static list if offline/no key
-       const suggestion = SECRET_SUGGESTIONS[Math.floor(Math.random() * SECRET_SUGGESTIONS.length)];
+       const suggestion = await generateAISecretSuggestion();
        setSecretInput(suggestion);
        setAiLoading(false);
    };
@@ -394,17 +420,57 @@ function LocalGame({ onBack }) {
    };
 
 
-   // Minimal Renders for Local to save space
-   if (phase === 'lobby') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-gradient-to-br from-orange-500 to-pink-600 font-sans"><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8"><div className="text-center mb-6"><div className="inline-block p-3 bg-orange-100 rounded-full mb-2"><Smartphone size={32} className="text-orange-600"/></div><h1 className="text-2xl font-black text-gray-800">Pass-n-Play Mode</h1><p className="text-gray-500 text-sm">One device. Pass it around.</p></div><div className="space-y-4"><div><label className="block text-sm font-bold text-gray-700 mb-1">Add Players</label><div className="flex gap-2"><input className="flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none bg-white text-gray-900" value={inputValue} onChange={e=>setInputValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} placeholder="Player Name"/><button onClick={addPlayer} className="bg-orange-100 text-orange-700 p-3 rounded-lg hover:bg-orange-200"><Plus size={24}/></button></div></div><div className="max-h-48 overflow-y-auto space-y-2">{players.map(p=><div key={p.id} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg"><span className="font-bold text-gray-800">{p.name}</span><button onClick={()=>removePlayer(p.id)} className="text-red-400"><Trash2 size={16}/></button></div>)}</div>{players.length === 0 && <p className="text-center text-gray-400 text-sm italic">Add at least 2 players</p>}<div className="flex flex-col gap-3 mt-4"><button onClick={startInputPhase} disabled={players.length<2} className="w-full bg-orange-600 text-white font-bold py-3 rounded-xl shadow-lg disabled:opacity-50">Start Game</button><button onClick={onBack} className="w-full text-gray-500 font-bold py-3">Back to Home</button></div></div></div></div></div>;
-   if (phase === 'transition') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-gray-900 text-center"><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto space-y-8"><h2 className="text-3xl font-black text-white">Stop! Don't Look!</h2><p className="text-gray-300 text-xl">Pass the device to <br/><strong className="text-4xl text-orange-400 block mt-4">{players[currentPlayerInputIndex+1].name}</strong></p><button onClick={nextInputPlayer} className="w-full bg-white text-gray-900 font-bold py-4 rounded-xl shadow-lg mt-8">I am {players[currentPlayerInputIndex+1].name}</button></div></div></div>;
-   if (phase === 'pre_game') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-gradient-to-br from-green-500 to-teal-600 text-center"><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 space-y-6 animate-in zoom-in"><div className="flex justify-center"><div className="bg-green-100 p-4 rounded-full"><Lock size={48} className="text-green-600"/></div></div><div><h2 className="text-3xl font-black text-gray-800">Secrets Locked!</h2><p className="text-gray-500 mt-2">The bowl is mixed. The secrets are safe. Are you ready to guess?</p></div><button onClick={startGame} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-700 transition transform active:scale-95">Let's Play! <Play size={20} className="inline ml-2"/></button></div></div></div>;
-   if (phase === 'input') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-orange-50"><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto space-y-6"><div className="bg-white p-6 rounded-2xl shadow-sm text-center"><h2 className="text-xl font-bold text-gray-500 uppercase tracking-widest mb-1">Player {currentPlayerInputIndex+1} / {players.length}</h2><h1 className="text-3xl font-black text-orange-600">{players[currentPlayerInputIndex].name}</h1></div><div className="bg-white p-6 rounded-2xl shadow-lg flex flex-col gap-4"><label className="block font-bold text-gray-700">Write a secret about yourself...</label><textarea className="w-full p-4 rounded-xl border border-gray-200 focus:border-orange-500 bg-white text-gray-900 outline-none h-32 resize-none" placeholder={randomPlaceholder} value={secretInput} onChange={e=>setSecretInput(e.target.value)}/><div className="flex justify-end"><button onClick={getAISuggestion} className="text-xs font-bold text-purple-600 flex items-center gap-1 hover:text-purple-800 transition">{aiLoading ? "Thinking..." : <><Wand2 size={12}/> ✨ Help me write</>}</button></div><button onClick={submitSecret} className="w-full bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md">Lock it in 🔒</button></div></div></div></div>;
+   // --- Local Renders ---
+   if (phase === 'lobby') {
+       return (
+       <div className="fixed inset-0 w-full h-full overflow-y-auto bg-gradient-to-br from-orange-400 to-rose-400 font-sans">
+           <div className="min-h-full flex flex-col justify-center p-4">
+           <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8">
+               <div className="text-center mb-6">
+               <div className="inline-block p-3 bg-orange-100 rounded-full mb-2"><Smartphone size={32} className="text-orange-600"/></div>
+               <h1 className="text-2xl font-black text-gray-800">Pass-n-Play Mode</h1>
+               <p className="text-gray-500 text-sm">One device. Pass it around.</p>
+               </div>
+               <div className="space-y-4">
+               <div>
+                   <label className="block text-sm font-bold text-gray-700 mb-1">Add Players</label>
+                   <div className="flex gap-2">
+                   <input className="flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none bg-white text-gray-900" value={inputValue} onChange={e=>setInputValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} placeholder="Player Name"/>
+                   <button onClick={addPlayer} className="bg-orange-100 text-orange-700 p-3 rounded-lg hover:bg-orange-200"><Plus size={24}/></button>
+                   </div>
+               </div>
+               <div className="max-h-48 overflow-y-auto space-y-2">
+                   {players.map((p) => (
+                   <div key={p.id} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
+                       <span className="font-bold text-gray-800">{p.name}</span>
+                       <button onClick={() => removePlayer(p.id)} className="text-red-400"><Trash2 size={16}/></button>
+                   </div>
+                   ))}
+                   {players.length === 0 && <p className="text-center text-gray-400 text-sm italic">Add at least 2 players</p>}
+               </div>
+               <div className="flex flex-col gap-3 mt-4">
+                   <button onClick={startInputPhase} disabled={players.length < 2} className="w-full bg-orange-500 text-white font-bold py-3 rounded-xl shadow-lg disabled:opacity-50 hover:bg-orange-600">Start Game</button>
+                   <button onClick={onBack} className="w-full text-gray-500 font-bold py-3">Back to Home</button>
+               </div>
+               </div>
+           </div>
+           </div>
+       </div>
+       );
+   }
+
+
+   if (phase === 'transition') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-stone-900 text-center"><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto space-y-8"><h2 className="text-3xl font-black text-white">Stop! Don't Look!</h2><p className="text-stone-300 text-xl">Pass the device to <br/><strong className="text-4xl text-orange-400 block mt-4">{players[currentPlayerInputIndex+1].name}</strong></p><button onClick={nextInputPlayer} className="w-full bg-white text-stone-900 font-bold py-4 rounded-xl shadow-lg mt-8">I am {players[currentPlayerInputIndex+1].name}</button></div></div></div>;
   
-   if (phase === 'finished') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-indigo-600"><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 text-center space-y-6"><h1 className="text-3xl font-black text-gray-800">That's Sum'n 'bout E'erbody!</h1><p className="text-gray-500 italic">"{randomGameOverLine}"</p><div className="grid grid-cols-2 gap-4"><div className="bg-indigo-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-indigo-600">{players.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Friends</span></div><div className="bg-purple-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-purple-600">{deck.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Secrets</span></div></div><div className="space-y-3"><button onClick={()=>setPhase('lobby')} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl">Play Again</button><button onClick={onBack} className="w-full text-gray-400 font-bold py-3">Back to Home</button></div></div></div></div>;
+   if (phase === 'pre_game') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-gradient-to-br from-orange-400 to-rose-500 text-center"><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 space-y-6 animate-in zoom-in"><div className="flex justify-center"><div className="bg-orange-100 p-4 rounded-full"><Lock size={48} className="text-orange-600"/></div></div><div><h2 className="text-3xl font-black text-gray-800">Secrets Locked!</h2><p className="text-gray-500 mt-2">The bowl is mixed. The secrets are safe. Are you ready to guess?</p></div><button onClick={startGame} className="w-full bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-orange-700 transition transform active:scale-95">Let's Play! <Play size={20} className="inline ml-2"/></button></div></div></div>;
+  
+   if (phase === 'input') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-orange-50"><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto space-y-6"><div className="bg-white p-6 rounded-2xl shadow-sm text-center"><h2 className="text-xl font-bold text-gray-500 uppercase tracking-widest mb-1">Player {currentPlayerInputIndex+1} / {players.length}</h2><h1 className="text-3xl font-black text-orange-600">{players[currentPlayerInputIndex].name}</h1></div><div className="bg-white p-6 rounded-2xl shadow-lg flex flex-col gap-4"><label className="block font-bold text-gray-700">Write a secret about yourself...</label><textarea className="w-full p-4 rounded-xl border border-gray-200 focus:border-orange-500 bg-white text-gray-900 outline-none h-32 resize-none" placeholder={randomPlaceholder} value={secretInput} onChange={e=>setSecretInput(e.target.value)}/><div className="flex justify-end"><button onClick={getAISuggestion} className="text-xs font-bold text-orange-600 flex items-center gap-1 hover:text-orange-800 transition">{aiLoading ? "Thinking..." : <><Wand2 size={12}/> ✨ Help me write</>}</button></div><button onClick={submitSecret} className="w-full bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md">Lock it in 🔒</button></div></div></div></div>;
+  
+   if (phase === 'finished') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-stone-800"><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 text-center space-y-6"><h1 className="text-3xl font-black text-gray-800">That's Sum'n 'bout E'erbody!</h1><p className="text-gray-500 italic">"{randomGameOverLine}"</p><div className="grid grid-cols-2 gap-4"><div className="bg-orange-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-orange-600">{players.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Friends</span></div><div className="bg-rose-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-rose-600">{deck.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Secrets</span></div></div><div className="space-y-3"><button onClick={()=>setPhase('lobby')} className="w-full bg-orange-600 text-white font-bold py-3 rounded-xl">Play Again</button><button onClick={onBack} className="w-full text-gray-400 font-bold py-3">Back to Home</button></div></div></div></div>;
   
    const card = deck[currentCardIndex];
    const currP = players[turnIndex%players.length];
-   return <div className={`fixed inset-0 w-full h-full overflow-y-auto ${turnState==='correct'?'bg-green-600':turnState==='incorrect'?'bg-red-600':'bg-gray-900'} transition-colors duration-500`}><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto z-10 space-y-6"><div className="text-center mb-6"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {currentCardIndex+1} of {deck.length}</span></div><div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[500px] flex flex-col"><div className="p-4 bg-orange-50 border-b flex items-center justify-center gap-2"><span className="text-xl font-black text-orange-700">{currP.name} is guessing</span></div><div className="p-8 flex-1 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 border-b"><p className="text-2xl md:text-3xl font-black text-center text-gray-900">"{card.text}"</p></div><div className="flex-none p-6 bg-gray-50">{turnState==='guessing' ? <div className="flex flex-col gap-4"><p className="text-center text-gray-500 font-bold uppercase text-xs tracking-wider">This Sum'n 'bout who?</p><div className="grid grid-cols-2 gap-2">{players.map(p=><button key={p.id} onClick={()=>setSelectedGuessedPlayer(p)} className={`p-3 rounded-xl font-bold text-sm border transition-all ${selectedGuessedPlayer?.id===p.id?'bg-orange-600 text-white transform scale-105 shadow-md':'bg-white text-gray-700 hover:bg-orange-50 border border-gray-200'}`}>{p.name}{selectedGuessedPlayer?.id===p.id&&<CheckCircle size={18}/>}</button>)}</div><button onClick={handleGuess} disabled={!selectedGuessedPlayer} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition">Confirm Guess</button></div> : <div className="flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">{turnState==='correct' && <Confetti/>}<div className={`mb-4 p-4 rounded-full ${turnState==='correct'?'bg-green-100':'bg-red-100'}`}>{turnState==='correct'?<ThumbsUp className="w-12 h-12 text-green-600"/>:<XCircle className="w-12 h-12 text-red-600"/>}</div><h2 className={`text-3xl font-black ${turnState==='correct'?'text-green-600':'text-red-600'} mb-4`}>{turnState==='correct'?`That's Sum'n 'bout ${card.owner}!`:`That's not Sum'n 'bout ${lastResult.target}!`}</h2>{turnState==='correct' && <div className="bg-purple-50 p-4 rounded-xl border-2 border-purple-100 mb-6 w-full"><div className="flex items-center justify-center gap-2 text-purple-600 font-bold mb-1"><Mic size={20}/> Story Time</div><p className="text-sm text-purple-800">Spill the beans! Tell the group the story.</p></div>}<button onClick={nextTurn} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-gray-800 transform active:scale-95 transition">{turnState==='correct'?'Next Secret':'Try Another Secret'}</button></div>}</div></div></div></div></div>;
+   return <div className={`fixed inset-0 w-full h-full overflow-y-auto ${turnState==='correct'?'bg-green-600':turnState==='incorrect'?'bg-red-600':'bg-stone-900'} transition-colors duration-500`}><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto z-10 space-y-6"><div className="text-center mb-6"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {currentCardIndex+1} of {deck.length}</span></div><div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[500px] flex flex-col"><div className="p-4 bg-orange-50 border-b flex items-center justify-center gap-2"><span className="text-xl font-black text-orange-700">{currP.name} is guessing</span></div><div className="p-8 flex-1 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 border-b"><p className="text-2xl md:text-3xl font-black text-center text-gray-800 leading-tight">"{card.text}"</p></div><div className="flex-none p-6 bg-gray-50">{turnState==='guessing' ? <div className="flex flex-col gap-4"><p className="text-center text-gray-500 font-bold uppercase text-xs tracking-wider">This Sum'n 'bout who?</p><div className="grid grid-cols-2 gap-2">{players.map(p=><button key={p.id} onClick={()=>setSelectedGuessedPlayer(p)} className={`p-3 rounded-xl font-bold text-sm border transition-all ${selectedGuessedPlayer?.id===p.id?'bg-orange-600 text-white transform scale-105 shadow-md':'bg-white text-gray-700 hover:bg-orange-50 border border-gray-200'}`}>{p.name}{selectedGuessedPlayer?.id===p.id&&<CheckCircle size={18}/>}</button>)}</div><button onClick={handleGuess} disabled={!selectedGuessedPlayer} className="w-full bg-stone-900 text-white font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition">Confirm Guess</button></div> : <div className="flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">{turnState==='correct' && <Confetti/>}<div className={`mb-4 p-4 rounded-full ${turnState==='correct'?'bg-green-100':'bg-red-100'}`}>{turnState==='correct'?<ThumbsUp className="w-12 h-12 text-green-600"/>:<XCircle className="w-12 h-12 text-red-600"/>}</div><h2 className={`text-3xl font-black ${turnState==='correct'?'text-green-600':'text-red-600'} mb-4`}>{turnState==='correct'?`That's Sum'n 'bout ${card.owner}!`:`That's not Sum'n 'bout ${lastResult.target}!`}</h2>{turnState==='correct' && <div className="bg-orange-50 p-4 rounded-xl border-2 border-orange-100 mb-6 w-full"><div className="flex items-center justify-center gap-2 text-orange-600 font-bold mb-1"><Mic size={20}/> Story Time</div><p className="text-sm text-orange-800">Spill the beans! Tell the group the story.</p></div>}<button onClick={nextTurn} className="w-full bg-stone-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-stone-800 transform active:scale-95 transition">{turnState==='correct'?'Next Secret':'Try Another Secret'}</button></div>}</div></div></div></div></div>;
 }
 
 
@@ -412,9 +478,9 @@ function LocalGame({ onBack }) {
 function OnlineGame({ onSwitchToLocal }) {
  const [user, setUser] = useState(null);
  const [roomCode, setRoomCode] = useState('SHELTERS');
- const [inputName, setInputName] = useState('');
- const [showQR, setShowQR] = useState(false);
  const [showOfflineOption, setShowOfflineOption] = useState(false);
+  const [inputName, setInputName] = useState('');
+ const [showQR, setShowQR] = useState(false);
   const [joined, setJoined] = useState(false);
  const [gameState, setGameState] = useState(null);
  const [loading, setLoading] = useState(false);
@@ -442,22 +508,31 @@ function OnlineGame({ onSwitchToLocal }) {
  }, [gameState?.phase]);
 
 
- // Auth Init
  useEffect(() => {
    const timer = setTimeout(() => setShowOfflineOption(true), 3000);
+  
    const initAuth = async () => {
      try {
-       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-       else await signInAnonymously(auth);
-     } catch (err) { console.error(err); setError("Auth failed."); setShowOfflineOption(true); }
+       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+         await signInWithCustomToken(auth, __initial_auth_token);
+       } else {
+         await signInAnonymously(auth);
+       }
+     } catch (err) {
+       console.error("Auth error:", err);
+       setError("Could not authenticate.");
+       setShowOfflineOption(true);
+     }
    };
    initAuth();
    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
-   return () => { unsubscribe(); clearTimeout(timer); };
+   return () => {
+     unsubscribe();
+     clearTimeout(timer);
+   };
  }, []);
 
 
- // Room Listener
  useEffect(() => {
    if (!user || !joined || !roomCode) return;
    const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
@@ -481,23 +556,6 @@ function OnlineGame({ onSwitchToLocal }) {
    });
    return () => unsubscribe();
  }, [user, joined, roomCode, isChatOpen]);
-
-
- useEffect(() => { if (isChatOpen) setHasUnread(false); }, [isChatOpen]);
-
-
- const botSpeak = async (type, context = {}) => {
-     const text = await generateAICommentary(type, context);
-     const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-     await updateDoc(roomRef, { messages: arrayUnion({ sender: "Sum'n Bot 🤖", text: text, timestamp: Date.now() }) });
- };
-
-
- const handleSendMessage = async (text) => {
-     const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-     const myName = gameState?.players?.find(p => p.id === user.uid)?.name || "Unknown";
-     if (myName) { await updateDoc(roomRef, { messages: arrayUnion({ sender: myName, text: text, timestamp: Date.now() }) }); }
- };
 
 
  const handleJoin = async () => {
@@ -568,7 +626,16 @@ function OnlineGame({ onSwitchToLocal }) {
    const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
    const turnIdx = (gameState.turnIndex || 0) % gameState.players.length;
    const currentGuesser = gameState.players[turnIdx];
-   await botSpeak(isCorrect ? 'correct' : 'incorrect');
+  
+   const context = {
+       guesser: currentGuesser?.name || "Someone",
+       target: selectedGuessedPlayer.name,
+       owner: currentCard.owner,
+       secret: currentCard.text
+   };
+   await botSpeak(isCorrect ? 'correct' : 'incorrect', context);
+
+
    await updateDoc(roomRef, { turnState: isCorrect ? 'correct' : 'incorrect', lastGuessedName: selectedGuessedPlayer.name, guesserName: currentGuesser ? currentGuesser.name : 'Someone' });
    setSelectedGuessedPlayer(null);
  };
@@ -597,18 +664,35 @@ function OnlineGame({ onSwitchToLocal }) {
  };
 
 
+ useEffect(() => { if (isChatOpen) setHasUnread(false); }, [isChatOpen]);
+
+
+ const botSpeak = async (type, context = {}) => {
+     const text = await generateAICommentary(type, context);
+     const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
+     await updateDoc(roomRef, { messages: arrayUnion({ sender: "Sum'n Bot 🤖", text: text, timestamp: Date.now() }) });
+ };
+
+
+ const handleSendMessage = async (text) => {
+     const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
+     const myName = gameState?.players?.find(p => p.id === user.uid)?.name || "Unknown";
+     if (myName) { await updateDoc(roomRef, { messages: arrayUnion({ sender: myName, text: text, timestamp: Date.now() }) }); }
+ };
+
+
  // --- RENDER CONTENT HELPERS ---
  const renderJoinScreen = () => (
    <div className="flex flex-col justify-center h-full p-4">
      <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8">
-       <div className="flex justify-center mb-4"><Sparkles className="w-12 h-12 text-purple-600" /></div>
+       <div className="flex justify-center mb-4"><Sparkles className="w-12 h-12 text-orange-500" /></div>
        <h1 className="text-3xl font-black text-center text-gray-800 mb-2">Sum'n 'bout Me</h1>
        <p className="text-center text-gray-500 mb-6">Online Party Mode</p>
        <div className="space-y-4">
          <div><label className="block text-sm font-bold text-gray-700 mb-1">Your Name</label><input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-gray-300 outline-none bg-white text-gray-900" placeholder="Enter your name"/></div>
          <div><label className="block text-sm font-bold text-gray-700 mb-1">Room Code</label><input type="text" value={roomCode} onChange={(e) => setRoomCode(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-gray-300 outline-none uppercase tracking-widest bg-white text-gray-900" placeholder="SHELTERS"/></div>
          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-         <button onClick={handleJoin} disabled={loading || !inputName || !roomCode} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg shadow-lg transition active:scale-95 disabled:opacity-50">{loading ? "Joining..." : "Join Party"}</button>
+         <button onClick={handleJoin} disabled={loading || !inputName || !roomCode} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg shadow-lg transition active:scale-95 disabled:opacity-50">{loading ? "Joining..." : "Join Party"}</button>
          <button onClick={onSwitchToLocal} className="w-full text-gray-400 font-bold text-sm py-2 hover:text-gray-600 flex items-center justify-center gap-2"><Smartphone size={16}/> Switch to Pass-n-Play Mode</button>
        </div>
      </div>
@@ -621,15 +705,15 @@ function OnlineGame({ onSwitchToLocal }) {
    return (
    <div className="flex flex-col justify-center h-full p-4">
      <div className="w-full max-w-md mx-auto space-y-6">
-       <div className="bg-white rounded-xl shadow-sm p-6 text-center border-b-4 border-purple-200">
+       <div className="bg-white rounded-xl shadow-sm p-6 text-center border-b-4 border-orange-200">
            <h2 className="text-xl font-bold text-gray-800">Room: {roomCode.toUpperCase()}</h2>
-           <div className="flex justify-center items-center gap-2 mt-2"><button onClick={() => setShowQR(!showQR)} className="text-xs flex items-center gap-1 bg-purple-50 text-purple-600 px-3 py-1 rounded-full hover:bg-purple-100 transition"><QrCode size={14} /> {showQR ? "Hide" : "Show QR"}</button></div>
+           <div className="flex justify-center items-center gap-2 mt-2"><button onClick={() => setShowQR(!showQR)} className="text-xs flex items-center gap-1 bg-orange-50 text-orange-600 px-3 py-1 rounded-full hover:bg-orange-100 transition"><QrCode size={14} /> {showQR ? "Hide" : "Show QR"}</button></div>
            {showQR && <div className="mt-4 flex justify-center"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}`} alt="QR" className="w-32 h-32 border-2 border-gray-100 rounded-xl"/></div>}
        </div>
        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
            <div className="p-4 bg-gray-100 border-b flex justify-between items-center"><span className="font-bold text-gray-700 flex items-center gap-2"><Users size={18}/> Players ({players.length})</span></div>
            <ul className="divide-y max-h-[40vh] overflow-y-auto">
-               {players.map(p => (<li key={p.id} className="p-4 flex items-center justify-between"><span className="font-medium text-gray-800">{p.name}</span>{p.id === user.uid && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">You</span>}</li>))}
+               {players.map(p => (<li key={p.id} className="p-4 flex items-center justify-between"><span className="font-medium text-gray-800">{p.name}</span>{p.id === user.uid && <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">You</span>}</li>))}
            </ul>
        </div>
        <div className="space-y-3">
@@ -663,12 +747,12 @@ function OnlineGame({ onSwitchToLocal }) {
      <div className="flex flex-col justify-center h-full p-4">
        <div className="w-full max-w-md mx-auto flex flex-col space-y-6">
            <div className="bg-white p-6 rounded-2xl shadow-sm text-center"><h2 className="text-2xl font-black text-gray-800 mb-2">Write Sum'n!</h2><p className="text-gray-600">Write a secret about yourself.</p></div>
-           <div className={`p-6 rounded-2xl shadow-md border-2 transition-all ${myPlayer.ready ? 'bg-green-50 border-green-200' : 'bg-white border-purple-100'}`}>
+           <div className={`p-6 rounded-2xl shadow-md border-2 transition-all ${myPlayer.ready ? 'bg-green-50 border-green-200' : 'bg-white border-orange-100'}`}>
                {!myPlayer.ready ? (
                    <div className="flex flex-col gap-3">
-                       <textarea className="w-full p-3 rounded-lg border border-gray-200 focus:border-purple-500 outline-none resize-none bg-white text-gray-900" placeholder={randomPlaceholder} rows={3} id="factInput"/>
-                       <div className="flex justify-end"><button onClick={getAISuggestion} className="text-xs font-bold text-purple-600 flex items-center gap-1 hover:text-purple-800 transition">{aiLoading ? "Thinking..." : <><Wand2 size={12}/> ✨ Help me write</>}</button></div>
-                       <button onClick={() => { const val = document.getElementById('factInput').value; if(val.trim()) submitFact(val); }} className="w-full bg-purple-600 text-white font-bold py-2 rounded-lg">Submit Secret</button>
+                       <textarea className="w-full p-3 rounded-lg border border-gray-200 focus:border-orange-500 outline-none resize-none bg-white text-gray-900" placeholder={randomPlaceholder} rows={3} id="factInput"/>
+                       <div className="flex justify-end"><button onClick={getAISuggestion} className="text-xs font-bold text-orange-600 flex items-center gap-1 hover:text-orange-800 transition">{aiLoading ? "Thinking..." : <><Wand2 size={12}/> ✨ Help me write</>}</button></div>
+                       <button onClick={() => { const val = document.getElementById('factInput').value; if(val.trim()) submitFact(val); }} className="w-full bg-orange-500 text-white font-bold py-2 rounded-lg">Submit Secret</button>
                    </div>
                ) : (<p className="text-green-700 italic text-center">Secret locked in.</p>)}
            </div>
@@ -697,22 +781,23 @@ function OnlineGame({ onSwitchToLocal }) {
           <div className="relative w-full max-w-md mx-auto z-10 space-y-6">
              <div className="text-center mb-6"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {gameState.currentCardIndex + 1} of {gameState.deck.length}</span></div>
              <div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[500px] flex flex-col">
-                 <div className="p-4 bg-purple-50 border-b flex items-center justify-center gap-2"><span className="text-xl font-black text-purple-700">{currentTurnPlayer?.name} is guessing</span></div>
+                 <div className="p-4 bg-orange-50 border-b flex items-center justify-center gap-2"><span className="text-xl font-black text-orange-700">{currentTurnPlayer?.name} is guessing</span></div>
                  <div className="p-8 flex-1 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 border-b"><p className="text-2xl md:text-3xl font-black text-center text-gray-900">"{currentCard.text}"</p></div>
                 
                  <div className="flex-none p-6 bg-gray-50">
                    {gameState.turnState === 'guessing' && (
                        <div className="flex flex-col gap-4">
+                          {!isMyTurn && <CyclingWaitingMessage name={currentTurnPlayer?.name} />}
                           <p className="text-center text-gray-500 font-bold uppercase text-xs tracking-wider">This Sum'n 'bout who?</p>
                           <div className="grid grid-cols-2 gap-2">
                                {gameState.players.map(p => (
                                    <button key={p.id} onClick={() => isMyTurn && setSelectedGuessedPlayer(p)} disabled={!isMyTurn}
-                                       className={`p-3 rounded-xl font-bold text-sm border transition-all ${selectedGuessedPlayer?.id === p.id ? 'bg-purple-600 text-white shadow-md' : 'bg-white text-gray-700'} ${!isMyTurn && 'opacity-50'}`}>
+                                       className={`p-3 rounded-xl font-bold text-sm border transition-all ${selectedGuessedPlayer?.id === p.id ? 'bg-orange-600 text-white transform scale-105 shadow-md' : 'bg-white text-gray-700 hover:bg-orange-50 border border-gray-200'} ${!isMyTurn && 'opacity-50'}`}>
                                        {p.name}{selectedGuessedPlayer?.id === p.id && <CheckCircle size={18} />}
                                    </button>
                                ))}
                           </div>
-                          {isMyTurn ? <button onClick={handleGuess} disabled={!selectedGuessedPlayer} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95">Confirm Guess</button> : <div className="w-full bg-gray-200 text-gray-500 font-bold py-4 rounded-xl text-center animate-pulse">Waiting for {currentTurnPlayer?.name}...</div>}
+                          {isMyTurn ? <button onClick={handleGuess} disabled={!selectedGuessedPlayer} className="w-full bg-stone-900 text-white font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition">Confirm Guess</button> : null}
                        </div>
                    )}
                    {gameState.turnState === 'correct' && (
@@ -720,15 +805,16 @@ function OnlineGame({ onSwitchToLocal }) {
                            <Confetti />
                            <div className="mb-4 bg-green-100 p-4 rounded-full"><ThumbsUp className="w-12 h-12 text-green-600" /></div>
                            <h2 className="text-3xl font-black text-green-600 mb-4">That's Sum'n 'bout {currentCard.owner}!</h2>
-                           <div className="bg-purple-50 p-4 rounded-xl border-2 border-purple-100 mb-6 w-full"><div className="flex items-center justify-center gap-2 text-purple-600 font-bold mb-1"><Mic size={20} /> Story Time</div><p className="text-sm text-purple-800">Spill the beans! Tell the group the story.</p></div>
+                           <div className="bg-orange-50 p-4 rounded-xl border-2 border-orange-100 mb-6 w-full"><div className="flex items-center justify-center gap-2 text-orange-600 font-bold mb-1"><Mic size={20}/> Story Time</div><p className="text-sm text-orange-800">Spill the beans! Tell the group the story.</p></div>
                            <button onClick={handleNextAfterResult} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-700 active:scale-95 gap-2 flex justify-center items-center">Next Secret <ArrowRight size={20}/></button>
                         </div>
                    )}
                    {gameState.turnState === 'incorrect' && (
                         <div className="flex flex-col items-center text-center animate-in zoom-in">
-                           <div className="mb-6 bg-red-100 p-4 rounded-full"><XCircle className="w-12 h-12 text-red-600" /></div>
+                           <style>{`@keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } } .animate-shake { animation: shake 0.5s ease-in-out; }`}</style>
+                           <div className="mb-6 bg-red-100 p-4 rounded-full animate-shake"><XCircle className="w-12 h-12 text-red-600" /></div>
                            <h2 className="text-2xl font-black text-red-600 mb-6">That's not Sum'n 'bout {gameState.lastGuessedName}!</h2>
-                           <button onClick={handleNextAfterResult} className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-gray-800 active:scale-95">Try Another Secret</button>
+                           <button onClick={handleNextAfterResult} className="w-full bg-stone-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-stone-800 active:scale-95">Try Another Secret</button>
                         </div>
                    )}
                  </div>
@@ -752,7 +838,7 @@ function OnlineGame({ onSwitchToLocal }) {
 
 
  // --- MAIN RENDER ---
- if (!user) return <div className="fixed inset-0 flex flex-col items-center justify-center text-center font-sans bg-pink-50">{showOfflineOption ? <button onClick={onSwitchToLocal} className="bg-white px-6 py-3 rounded-xl shadow">Play Offline</button> : <Loader className="animate-spin text-purple-600"/>}</div>;
+ if (!user) return <div className="fixed inset-0 flex flex-col items-center justify-center text-center font-sans bg-orange-50">{showOfflineOption ? <button onClick={onSwitchToLocal} className="bg-white px-6 py-3 rounded-xl shadow">Play Offline</button> : <Loader className="animate-spin text-orange-500"/>}</div>;
 
 
  if (!joined) return renderJoinScreen();
@@ -762,12 +848,12 @@ function OnlineGame({ onSwitchToLocal }) {
  let bgClass = "bg-gray-50";
  // Safely access gameState.phase and gameState.turnState only if gameState exists
  if (!gameState || gameState.phase === 'lobby') { content = renderLobby(); }
- else if (gameState.phase === 'input') { content = renderInput(); bgClass = "bg-purple-50"; }
+ else if (gameState.phase === 'input') { content = renderInput(); bgClass = "bg-orange-50"; }
  else if (gameState.phase === 'playing') {
      content = renderPlaying();
-     bgClass = gameState.turnState === 'correct' ? 'bg-green-600' : gameState.turnState === 'incorrect' ? 'bg-red-600' : 'bg-gray-900';
+     bgClass = gameState.turnState === 'correct' ? 'bg-green-600' : gameState.turnState === 'incorrect' ? 'bg-red-600' : 'bg-stone-900';
  }
- else if (gameState.phase === 'finished') { content = renderFinished(); bgClass = "bg-indigo-600"; }
+ else if (gameState.phase === 'finished') { content = renderFinished(); bgClass = "bg-stone-800"; }
 
 
  // If we are joined, we show the Split View (Desktop) or Mobile View
@@ -778,8 +864,8 @@ function OnlineGame({ onSwitchToLocal }) {
          {content}
          {/* Chat Button for Mobile */}
          <div className="md:hidden">
-            <button onClick={() => setIsChatOpen(true)} className="fixed bottom-6 right-6 bg-purple-600 text-white p-3 rounded-full shadow-xl hover:bg-purple-700 active:scale-95 z-40 flex items-center justify-center">
-              <MessageCircle size={24} />{hasUnread && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-purple-600 animate-pulse"/>}
+            <button onClick={() => setIsChatOpen(true)} className="fixed bottom-6 right-6 bg-orange-500 text-white p-3 rounded-full shadow-xl hover:bg-orange-600 active:scale-95 z-40 flex items-center justify-center">
+              <MessageCircle size={24} />{hasUnread && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse"/>}
             </button>
          </div>
       </div>
@@ -810,4 +896,6 @@ export default function App() {
  if (mode === 'local') return <LocalGame onBack={() => setMode('online')} />;
  return <OnlineGame onSwitchToLocal={() => setMode('local')} />;
 }
+
+
 
