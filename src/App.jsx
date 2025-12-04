@@ -464,7 +464,7 @@ function OnlineGame({ onSwitchToLocal }) {
  const [user, setUser] = useState(null);
  const [roomCode, setRoomCode] = useState('SHELTERS');
  const [showOfflineOption, setShowOfflineOption] = useState(false);
- const [confirmStart, setConfirmStart] = useState(false); // New state for start confirmation
+ const [confirmStart, setConfirmStart] = useState(false);
   const [inputName, setInputName] = useState('');
  const [showQR, setShowQR] = useState(false);
   const [joined, setJoined] = useState(false);
@@ -854,7 +854,7 @@ function OnlineGame({ onSwitchToLocal }) {
    const sortedPlayers = [...gameState.players].sort((a, b) => a.name.localeCompare(b.name));
    return (
      <div className="flex flex-col justify-center h-full p-4">
-       <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col h-[80vh]">
+       <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[80vh]">
            <div className="p-6 bg-orange-50 border-b border-orange-100 text-center">
                <h2 className="text-2xl font-black text-gray-800 flex items-center justify-center gap-2"><ScrollText className="text-orange-600"/> The Receipts</h2>
                <p className="text-sm text-orange-600">Here is who wrote what:</p>
