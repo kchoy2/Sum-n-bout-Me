@@ -40,7 +40,9 @@ import {
  Send,
  X,
  Minimize2,
- Wand2
+ Wand2,
+ ScrollText,
+ Eye
 } from 'lucide-react';
 
 
@@ -196,7 +198,7 @@ const generateAISecretSuggestion = async () => {
  if (!GEMINI_API_KEY) {
     return SECRET_SUGGESTIONS[Math.floor(Math.random() * SECRET_SUGGESTIONS.length)];
  }
-  const prompt = "Give me one funny, specific, safe-for-work 'Never have I ever' style fact or secret that someone might have. Examples: 'I've never eaten a taco', 'I own 50 rubber ducks'. Just the fact, no quotes.";
+  const prompt = "Give me one funny, specific, safe-for-work 'Never have I ever' style fact or secret. Examples: 'I've never eaten a taco', 'I own 50 rubber ducks'. Just the fact, no quotes.";
   try {
    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`, {
      method: 'POST',
@@ -213,26 +215,10 @@ const generateAISecretSuggestion = async () => {
 
 // Fallback Scripts
 const BOT_SCRIPTS = {
- intro: [
-     "Greetings, who dis?",
-     "I've arrived. Who's ready to spill tea?",
-     "Welcome to the lobby. Don't be shy.",
-     "Sum'n Bot in the house. Who are you people?"
- ],
- guessing: [
-     "Hmm... I wonder...",
-     "This is a tough one.",
-     "I'm sensing confusion.",
-     "Don't overthink it...",
-     "Tick tock..."
- ],
- replay: [
-     "Yeess. Let's Gooo!!",
-     "Round 2? Say less.",
-     "Back for more chaos? I love it.",
-     "Let's run it back!"
- ],
- start: ["The tea is hot today. Let's play.", "Secrets locked. Hope you're ready.", "Oh, this lore is about to go crazy.", "Finally, some juicy content.", "I promise I won't tell... (I totally will)."],
+ intro: ["Greetings, who dis?", "I've arrived. Spill the tea.", "Welcome to the lobby. Don't be shy.", "Sum'n Bot in the house. Who are you?"],
+ guessing: ["Hmm... I wonder...", "This is a tough one.", "I'm sensing confusion.", "Don't overthink it...", "Tick tock..."],
+ replay: ["Yeess. Let's Gooo!!", "Round 2? Say less.", "Back for more? I love it.", "Let's run it back!"],
+ start: ["The tea is hot today. Let's play.", "Secrets locked. Hope you're ready.", "Oh, this lore is about to go crazy.", "Finally, some juicy content."],
  correct: ["Wait, actually?!", "Okay, that explains so much.", "The math is mathing.", "Exposed!", "That is wild.", "I am shook.", "Main character energy."],
  incorrect: ["Big oof. Try again.", "Not quite the vibe.", "Imagine if that was true?", "Plot twist: It wasn't them.", "Respectfully, no.", "Back to the bowl."],
  next: ["Who's next on the hot seat?", "Keep the secrets coming.", "Next one, let's go.", "I need more tea. Next!", "Moving on..."]
@@ -295,7 +281,7 @@ function ChatPanel({ messages, onSendMessage, currentPlayerName, onClose, isMobi
 
  return (
    <div className="flex flex-col h-full bg-white">
-     <div className="p-3 border-b bg-orange-50 flex justify-between items-center">
+     <div className="p-3 border-b bg-orange-50 flex justify-between items-center" style={{ paddingTop: isMobile ? 'max(1rem, env(safe-area-inset-top))' : '0.75rem'}}>
        <h3 className="font-bold text-orange-800 flex items-center gap-2 text-sm uppercase tracking-wider"><MessageCircle size={16}/> Live Chat</h3>
        {isMobile && <button onClick={onClose}><Minimize2 size={20} className="text-orange-400"/></button>}
      </div>
@@ -317,9 +303,9 @@ function ChatPanel({ messages, onSendMessage, currentPlayerName, onClose, isMobi
            );
        })}
      </div>
-     <div className="p-3 border-t bg-gray-50">
+     <div className="p-3 border-t bg-gray-50" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
          <div className="flex gap-2">
-           <input className="flex-1 bg-white border border-gray-300 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition" placeholder="Say sum'n..." value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && text.trim()) { onSendMessage(text); setText(''); }}} />
+           <input className="flex-1 bg-white border border-gray-300 rounded-full px-4 py-2 text-base outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition" placeholder="Say sum'n..." value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && text.trim()) { onSendMessage(text); setText(''); }}} />
            <button onClick={() => { if (text.trim()) { onSendMessage(text); setText(''); }}} className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 shadow-md active:scale-95 transition"><Send size={18} /></button>
          </div>
      </div>
@@ -383,7 +369,7 @@ function LocalGame({ onBack }) {
        const nextIdx = turnIndex + 1; setTurnIndex(nextIdx);
        if (turnState === 'correct') {
            const nextCard = currentCardIndex + 1;
-           if (nextCard >= deck.length) setPhase('finished'); else { setCurrentCardIndex(nextCard); setTurnState('guessing'); }
+           if (nextCard >= deck.length) setPhase('summary'); else { setCurrentCardIndex(nextCard); setTurnState('guessing'); }
        } else {
            const newDeck = [...deck]; const card = newDeck.splice(currentCardIndex, 1)[0]; newDeck.push(card); setDeck(newDeck); setTurnState('guessing');
        }
@@ -394,7 +380,7 @@ function LocalGame({ onBack }) {
    if (phase === 'lobby') {
        return (
        <div className="fixed inset-0 w-full h-full overflow-y-auto bg-gradient-to-br from-orange-400 to-rose-400 font-sans">
-           <div className="min-h-full flex flex-col justify-center p-4">
+           <div className="min-h-full flex flex-col justify-center p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
            <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8">
                <div className="text-center mb-6">
                <div className="inline-block p-3 bg-orange-100 rounded-full mb-2"><Smartphone size={32} className="text-orange-600"/></div>
@@ -405,7 +391,7 @@ function LocalGame({ onBack }) {
                <div>
                    <label className="block text-sm font-bold text-gray-700 mb-1">Add Players</label>
                    <div className="flex gap-2">
-                   <input className="flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none bg-white text-gray-900" value={inputValue} onChange={e=>setInputValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} placeholder="Player Name"/>
+                   <input className="flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none bg-white text-gray-900 text-base" value={inputValue} onChange={e=>setInputValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} placeholder="Player Name"/>
                    <button onClick={addPlayer} className="bg-orange-100 text-orange-700 p-3 rounded-lg hover:bg-orange-200"><Plus size={24}/></button>
                    </div>
                </div>
@@ -434,19 +420,42 @@ function LocalGame({ onBack }) {
   
    if (phase === 'pre_game') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-gradient-to-br from-orange-400 to-rose-500 text-center"><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 space-y-6 animate-in zoom-in"><div className="flex justify-center"><div className="bg-orange-100 p-4 rounded-full"><Lock size={48} className="text-orange-600"/></div></div><div><h2 className="text-3xl font-black text-gray-800">Secrets Locked!</h2><p className="text-gray-500 mt-2">The bowl is mixed. The secrets are safe. Are you ready to guess?</p></div><button onClick={startGame} className="w-full bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-orange-700 transition transform active:scale-95">Let's Play! <Play size={20} className="inline ml-2"/></button></div></div></div>;
   
-   if (phase === 'input') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-orange-50"><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto space-y-6"><div className="bg-white p-6 rounded-2xl shadow-sm text-center"><h2 className="text-xl font-bold text-gray-500 uppercase tracking-widest mb-1">Player {currentPlayerInputIndex+1} / {players.length}</h2><h1 className="text-3xl font-black text-orange-600">{players[currentPlayerInputIndex].name}</h1></div><div className="bg-white p-6 rounded-2xl shadow-lg flex flex-col gap-4"><label className="block font-bold text-gray-700">Write a secret about yourself...</label><textarea className="w-full p-4 rounded-xl border border-gray-200 focus:border-orange-500 bg-white text-gray-900 outline-none h-32 resize-none" placeholder={randomPlaceholder} value={secretInput} onChange={e=>setSecretInput(e.target.value)}/><div className="flex justify-end"><button onClick={getAISuggestion} className="text-xs font-bold text-orange-600 flex items-center gap-1 hover:text-orange-800 transition">{aiLoading ? "Thinking..." : <><Wand2 size={12}/> ✨ Help me write</>}</button></div><button onClick={submitSecret} className="w-full bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md">Lock it in 🔒</button></div></div></div></div>;
+   if (phase === 'input') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-orange-50"><div className="min-h-full flex flex-col justify-center p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}><div className="w-full max-w-md mx-auto space-y-6"><div className="bg-white p-6 rounded-2xl shadow-sm text-center"><h2 className="text-xl font-bold text-gray-500 uppercase tracking-widest mb-1">Player {currentPlayerInputIndex+1} / {players.length}</h2><h1 className="text-3xl font-black text-orange-600">{players[currentPlayerInputIndex].name}</h1></div><div className="bg-white p-6 rounded-2xl shadow-lg flex flex-col gap-4"><label className="block font-bold text-gray-700">Write a secret about yourself...</label><textarea className="w-full p-4 rounded-xl border border-gray-200 focus:border-orange-500 bg-white text-gray-900 outline-none h-32 resize-none text-base" placeholder={randomPlaceholder} value={secretInput} onChange={e=>setSecretInput(e.target.value)}/><div className="flex justify-end"><button onClick={getAISuggestion} className="text-xs font-bold text-orange-600 flex items-center gap-1 hover:text-orange-800 transition">{aiLoading ? "Thinking..." : <><Wand2 size={12}/> ✨ Help me write</>}</button></div><button onClick={submitSecret} className="w-full bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md">Lock it in 🔒</button></div></div></div></div>;
   
-   if (phase === 'finished') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-stone-800"><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 text-center space-y-6"><h1 className="text-3xl font-black text-gray-800">That's Sum'n 'bout E'erbody!</h1><p className="text-gray-500 italic">"{randomGameOverLine}"</p><div className="grid grid-cols-2 gap-4"><div className="bg-orange-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-orange-600">{players.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Friends</span></div><div className="bg-rose-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-rose-600">{deck.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Secrets</span></div></div><div className="space-y-3"><button onClick={()=>setPhase('lobby')} className="w-full bg-orange-600 text-white font-bold py-3 rounded-xl">Play Again</button><button onClick={onBack} className="w-full text-gray-400 font-bold py-3">Back to Home</button></div></div></div></div>;
+   if (phase === 'summary') {
+       const sortedPlayers = [...players].sort((a, b) => a.name.localeCompare(b.name));
+       return (
+           <div className="fixed inset-0 w-full h-full overflow-y-auto bg-stone-100">
+               <div className="min-h-full flex flex-col justify-center p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+                   <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col h-[80vh]">
+                       <div className="p-6 bg-orange-50 border-b border-orange-100 text-center">
+                           <h2 className="text-2xl font-black text-gray-800 flex items-center justify-center gap-2"><ScrollText className="text-orange-600"/> The Receipts</h2>
+                           <p className="text-sm text-orange-600">Here is who wrote what:</p>
+                       </div>
+                       <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                           {sortedPlayers.map(p => (
+                               <div key={p.id} className="p-4 bg-stone-50 rounded-xl border border-stone-200">
+                                   <p className="font-black text-gray-800 text-lg mb-1">{p.name}</p>
+                                   <p className="text-gray-600 italic">"{p.fact}"</p>
+                               </div>
+                           ))}
+                       </div>
+                       <div className="p-4 border-t border-gray-100">
+                           <button onClick={() => setPhase('finished')} className="w-full bg-stone-900 text-white font-bold py-4 rounded-xl shadow-lg">Wrap It Up</button>
+                       </div>
+                   </div>
+               </div>
+           </div>
+       );
+   }
+  
+   if (phase === 'finished') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-stone-800"><div className="min-h-full flex flex-col justify-center p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}><div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 text-center space-y-6"><h1 className="text-3xl font-black text-gray-800">That's Sum'n 'bout E'erbody!</h1><p className="text-gray-500 italic">"{randomGameOverLine}"</p><div className="grid grid-cols-2 gap-4"><div className="bg-orange-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-orange-600">{players.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Friends</span></div><div className="bg-rose-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-rose-600">{deck.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Secrets</span></div></div><div className="space-y-3"><button onClick={()=>setPhase('lobby')} className="w-full bg-orange-600 text-white font-bold py-3 rounded-xl">Play Again</button><button onClick={onBack} className="w-full text-gray-400 font-bold py-3">Back to Home</button></div></div></div></div>;
   
    const card = deck[currentCardIndex];
    const currP = players[turnIndex%players.length];
-   return <div className={`fixed inset-0 w-full h-full overflow-y-auto ${turnState==='correct'?'bg-green-600':turnState==='incorrect'?'bg-red-600':'bg-stone-900'} transition-colors duration-500`}><div className="min-h-full flex flex-col justify-center p-4"><div className="w-full max-w-md mx-auto z-10 space-y-6"><div className="text-center mb-6"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {currentCardIndex+1} of {deck.length}</span></div><div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[500px] flex flex-col">
-       <div className="p-4 bg-orange-50 border-b flex items-center justify-center gap-2"><span className="text-xl font-black text-orange-700">{currP.name} is guessing</span></div>
-       <div className="p-8 flex-1 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 border-b">
-           <style>{`@keyframes flipIn { 0% { transform: rotateY(90deg); opacity: 0; } 100% { transform: rotateY(0deg); opacity: 1; } }`}</style>
-           <p key={currentCardIndex} className="text-2xl md:text-3xl font-black text-center text-gray-800 leading-tight" style={{ animation: 'flipIn 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}>"{card.text}"</p>
-       </div>
-       <div className="flex-none p-6 bg-gray-50">{turnState==='guessing' ? <div className="flex flex-col gap-4"><p className="text-center text-gray-500 font-bold uppercase text-xs tracking-wider">This Sum'n 'bout who?</p><div className="grid grid-cols-2 gap-2">{players.map(p=><button key={p.id} onClick={()=>setSelectedGuessedPlayer(p)} className={`p-3 rounded-xl font-bold text-sm border transition-all ${selectedGuessedPlayer?.id===p.id?'bg-orange-600 text-white transform scale-105 shadow-md':'bg-white text-gray-700 hover:bg-orange-50 border border-gray-200'}`}>{p.name}{selectedGuessedPlayer?.id===p.id&&<CheckCircle size={18}/>}</button>)}</div><button onClick={handleGuess} disabled={!selectedGuessedPlayer} className="w-full bg-stone-900 text-white font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition">Confirm Guess</button></div> : <div className="flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">{turnState==='correct' && <Confetti/>}<div className={`mb-4 p-4 rounded-full ${turnState==='correct'?'bg-green-100':'bg-red-100'}`}>{turnState==='correct'?<ThumbsUp className="w-12 h-12 text-green-600"/>:<XCircle className="w-12 h-12 text-red-600"/>}</div><h2 className={`text-3xl font-black ${turnState==='correct'?'text-green-600':'text-red-600'} mb-4`}>{turnState==='correct'?`That's Sum'n 'bout ${card.owner}!`:`That's not Sum'n 'bout ${lastResult.target}!`}</h2>{turnState==='correct' && <div className="bg-orange-50 p-4 rounded-xl border-2 border-orange-100 mb-6 w-full"><div className="flex items-center justify-center gap-2 text-orange-600 font-bold mb-1"><Mic size={20}/> Story Time</div><p className="text-sm text-orange-800">Spill the beans! Tell the group the story.</p></div>}<button onClick={nextTurn} className="w-full bg-stone-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-stone-800 transform active:scale-95 transition">{turnState==='correct'?'Next Secret':'Try Another Secret'}</button></div>}</div></div></div></div></div>;
+   return <div className={`fixed inset-0 w-full h-full overflow-y-auto ${turnState==='correct'?'bg-green-600':turnState==='incorrect'?'bg-red-600':'bg-stone-900'} transition-colors duration-500`}><div className="min-h-full flex flex-col justify-center p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}><div className="w-full max-w-md mx-auto z-10 space-y-6"><div className="text-center mb-6"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {currentCardIndex+1} of {deck.length}</span></div><div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[500px] flex flex-col"><div className="p-4 bg-orange-50 border-b flex items-center justify-center gap-2"><span className="text-xl font-black text-orange-700">{currP.name} is guessing</span></div><div className="p-8 flex-1 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 border-b">
+   <style>{`@keyframes flipIn { 0% { transform: rotateY(90deg); opacity: 0; } 100% { transform: rotateY(0deg); opacity: 1; } }`}</style>
+   <p key={currentCardIndex} className="text-2xl md:text-3xl font-black text-center text-gray-800 leading-tight" style={{ animation: 'flipIn 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}>"{card.text}"</p></div><div className="flex-none p-6 bg-gray-50">{turnState==='guessing' ? <div className="flex flex-col gap-4"><p className="text-center text-gray-500 font-bold uppercase text-xs tracking-wider">This Sum'n 'bout who?</p><div className="grid grid-cols-2 gap-2">{players.map(p=><button key={p.id} onClick={()=>setSelectedGuessedPlayer(p)} className={`p-3 rounded-xl font-bold text-sm border transition-all ${selectedGuessedPlayer?.id===p.id?'bg-orange-600 text-white transform scale-105 shadow-md':'bg-white text-gray-700 hover:bg-orange-50 border border-gray-200'}`}>{p.name}{selectedGuessedPlayer?.id===p.id&&<CheckCircle size={18}/>}</button>)}</div><button onClick={handleGuess} disabled={!selectedGuessedPlayer} className="w-full bg-stone-900 text-white font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition">Confirm Guess</button></div> : <div className="flex flex-col items-center justify-center text-center animate-in zoom-in duration-300">{turnState==='correct' && <Confetti/>}<div className={`mb-4 p-4 rounded-full ${turnState==='correct'?'bg-green-100':'bg-red-100'}`}>{turnState==='correct'?<ThumbsUp className="w-12 h-12 text-green-600"/>:<XCircle className="w-12 h-12 text-red-600"/>}</div><h2 className={`text-3xl font-black ${turnState==='correct'?'text-green-600':'text-red-600'} mb-4`}>{turnState==='correct'?`That's Sum'n 'bout ${card.owner}!`:`That's not Sum'n 'bout ${lastResult.target}!`}</h2>{turnState==='correct' && <div className="bg-orange-50 p-4 rounded-xl border-2 border-orange-100 mb-6 w-full"><div className="flex items-center justify-center gap-2 text-orange-600 font-bold mb-1"><Mic size={20}/> Story Time</div><p className="text-sm text-orange-800">Spill the beans! Tell the group the story.</p></div>}<button onClick={nextTurn} className="w-full bg-stone-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-stone-800 transform active:scale-95 transition">{turnState==='correct'?'Next Secret':'Try Another Secret'}</button></div>}</div></div></div></div></div>;
 }
 
 
@@ -455,6 +464,7 @@ function OnlineGame({ onSwitchToLocal }) {
  const [user, setUser] = useState(null);
  const [roomCode, setRoomCode] = useState('SHELTERS');
  const [showOfflineOption, setShowOfflineOption] = useState(false);
+ const [confirmStart, setConfirmStart] = useState(false); // New state for start confirmation
   const [inputName, setInputName] = useState('');
  const [showQR, setShowQR] = useState(false);
   const [joined, setJoined] = useState(false);
@@ -565,8 +575,18 @@ function OnlineGame({ onSwitchToLocal }) {
        const data = snap.data();
        let updatedPlayers = [...data.players];
        const existingIndex = updatedPlayers.findIndex(p => p.id === user.uid);
-       if (existingIndex >= 0) updatedPlayers[existingIndex].name = inputName.trim(); else updatedPlayers.push(newPlayer);
-       await updateDoc(roomRef, { players: updatedPlayers });
+      
+       if (existingIndex >= 0) {
+            updatedPlayers[existingIndex].name = inputName.trim();
+            await updateDoc(roomRef, { players: updatedPlayers });
+       } else {
+            if (data.phase === 'lobby') {
+               updatedPlayers.push(newPlayer);
+               await updateDoc(roomRef, { players: updatedPlayers });
+            } else {
+               // Game in progress: Spectator mode (don't add to DB)
+            }
+       }
      }
      setJoined(true); setError('');
    } catch (err) { console.error(err); setError("Join failed."); }
@@ -641,7 +661,7 @@ function OnlineGame({ onSwitchToLocal }) {
    await botSpeak('next');
    if (gameState.turnState === 'correct') {
        const nextIndex = gameState.currentCardIndex + 1;
-       if (nextIndex >= gameState.deck.length) await updateDoc(roomRef, { phase: 'finished' });
+       if (nextIndex >= gameState.deck.length) await updateDoc(roomRef, { phase: 'summary' });
        else await updateDoc(roomRef, { currentCardIndex: nextIndex, turnState: 'guessing', turnIndex: nextTurnIndex, lastGuessedName: '', guesserName: '' });
    } else {
        const newDeck = [...gameState.deck]; const currentCard = newDeck[gameState.currentCardIndex]; newDeck.splice(gameState.currentCardIndex, 1); newDeck.push(currentCard);
@@ -666,8 +686,8 @@ function OnlineGame({ onSwitchToLocal }) {
        <h1 className="text-3xl font-black text-center text-gray-800 mb-2">Sum'n 'bout Me</h1>
        <p className="text-center text-gray-500 mb-6">Online Party Mode</p>
        <div className="space-y-4">
-         <div><label className="block text-sm font-bold text-gray-700 mb-1">Your Name</label><input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-gray-300 outline-none bg-white text-gray-900" placeholder="Enter your name"/></div>
-         <div><label className="block text-sm font-bold text-gray-700 mb-1">Room Code</label><input type="text" value={roomCode} onChange={(e) => setRoomCode(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-gray-300 outline-none uppercase tracking-widest bg-white text-gray-900" placeholder="SHELTERS"/></div>
+         <div><label className="block text-sm font-bold text-gray-700 mb-1">Your Name</label><input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-gray-300 outline-none bg-white text-gray-900 text-base" placeholder="Enter your name"/></div>
+         <div><label className="block text-sm font-bold text-gray-700 mb-1">Room Code</label><input type="text" value={roomCode} onChange={(e) => setRoomCode(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-gray-300 outline-none uppercase tracking-widest bg-white text-gray-900 text-base" placeholder="Enter Room Code"/></div>
          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
          <button onClick={handleJoin} disabled={loading || !inputName || !roomCode} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg shadow-lg transition active:scale-95 disabled:opacity-50">{loading ? "Joining..." : "Join Party"}</button>
          <button onClick={onSwitchToLocal} className="w-full text-gray-400 font-bold text-sm py-2 hover:text-gray-600 flex items-center justify-center gap-2"><Smartphone size={16}/> Switch to Pass-n-Play Mode</button>
@@ -694,11 +714,18 @@ function OnlineGame({ onSwitchToLocal }) {
            </ul>
        </div>
        <div className="space-y-3">
-           <button onClick={async () => {
-               const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-               if (gameState?.messages?.length === 0) await botSpeak('intro');
-               await updateDoc(roomRef, { phase: 'input' });
-           }} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-2">Start Sum'n <Play size={20} /></button>
+           {!confirmStart ? (
+              <button onClick={() => setConfirmStart(true)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-2">Start Sum'n <Play size={20} /></button>
+           ) : (
+              <div className="flex gap-2">
+                 <button onClick={async () => {
+                     const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
+                     if (gameState?.messages?.length === 0) await botSpeak('intro');
+                     await updateDoc(roomRef, { phase: 'input' });
+                 }} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg">Confirm Start</button>
+                 <button onClick={() => setConfirmStart(false)} className="w-1/3 bg-gray-200 text-gray-600 font-bold py-4 rounded-xl">Wait</button>
+              </div>
+           )}
            <button onClick={handleLeave} className="w-full font-bold py-3 rounded-xl border flex items-center justify-center gap-2 bg-white text-gray-500 border-gray-200 hover:bg-gray-50">{gameState?.hostId === user.uid ? <><Trash2 size={18} /> Close Room</> : <><LogOut size={18} /> Leave Room</>}</button>
        </div>
      </div>
@@ -709,7 +736,21 @@ function OnlineGame({ onSwitchToLocal }) {
 
  const renderInput = () => {
    const myPlayer = gameState.players.find(p => p.id === user.uid);
-   if (!myPlayer) return <div className="text-center p-4">Loading player...</div>;
+   // Spectator View (Joined late)
+   if (!myPlayer) {
+       return (
+           <div className="flex flex-col justify-center h-full p-4">
+               <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
+                   <div className="flex justify-center"><div className="bg-orange-100 p-3 rounded-full"><Eye size={32} className="text-orange-500"/></div></div>
+                   <h2 className="text-2xl font-black text-gray-800">Game in Progress</h2>
+                   <p className="text-gray-600">You joined late, so you are in <span className="font-bold text-orange-600">Spectator Mode</span>. You can watch the fun but can't play this round.</p>
+                   <button onClick={handleLeave} className="w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-xl">Leave Room</button>
+               </div>
+           </div>
+       );
+   }
+
+
    const completedCount = gameState.players.filter(p => p.ready).length;
    const totalCount = gameState.players.length;
    const waitingFor = gameState.players.filter(p => !p.ready).map(p => p.name);
@@ -731,7 +772,7 @@ function OnlineGame({ onSwitchToLocal }) {
            <div className={`p-6 rounded-2xl shadow-md border-2 transition-all ${myPlayer.ready ? 'bg-green-50 border-green-200' : 'bg-white border-orange-100'}`}>
                {!myPlayer.ready ? (
                    <div className="flex flex-col gap-3">
-                       <textarea className="w-full p-3 rounded-lg border border-gray-200 focus:border-orange-500 outline-none resize-none bg-white text-gray-900" placeholder={randomPlaceholder} rows={3} id="factInput"/>
+                       <textarea className="w-full p-3 rounded-lg border border-gray-200 focus:border-orange-500 outline-none resize-none bg-white text-gray-900 text-base" placeholder={randomPlaceholder} rows={3} id="factInput"/>
                        <div className="flex justify-end"><button onClick={getAISuggestion} className="text-xs font-bold text-orange-600 flex items-center gap-1 hover:text-orange-800 transition">{aiLoading ? "Thinking..." : <><Wand2 size={12}/> ✨ Help me write</>}</button></div>
                        <button onClick={() => { const val = document.getElementById('factInput').value; if(val.trim()) submitFact(val); }} className="w-full bg-orange-500 text-white font-bold py-2 rounded-lg">Submit Secret</button>
                    </div>
@@ -809,6 +850,32 @@ function OnlineGame({ onSwitchToLocal }) {
  };
 
 
+ const renderSummary = () => {
+   const sortedPlayers = [...gameState.players].sort((a, b) => a.name.localeCompare(b.name));
+   return (
+     <div className="flex flex-col justify-center h-full p-4">
+       <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col h-[80vh]">
+           <div className="p-6 bg-orange-50 border-b border-orange-100 text-center">
+               <h2 className="text-2xl font-black text-gray-800 flex items-center justify-center gap-2"><ScrollText className="text-orange-600"/> The Receipts</h2>
+               <p className="text-sm text-orange-600">Here is who wrote what:</p>
+           </div>
+           <div className="flex-1 overflow-y-auto p-4 space-y-3">
+               {sortedPlayers.map(p => (
+                   <div key={p.id} className="p-4 bg-stone-50 rounded-xl border border-stone-200">
+                       <p className="font-black text-gray-800 text-lg mb-1">{p.name}</p>
+                       <p className="text-gray-600 italic">"{p.fact}"</p>
+                   </div>
+               ))}
+           </div>
+           <div className="p-4 border-t border-gray-100">
+               <button onClick={async () => { const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); await updateDoc(roomRef, { phase: 'finished' }); }} className="w-full bg-stone-900 text-white font-bold py-4 rounded-xl shadow-lg">Wrap It Up</button>
+           </div>
+       </div>
+     </div>
+   );
+ };
+
+
  const renderFinished = () => (
      <div className="flex flex-col justify-center h-full p-4">
        <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 text-center space-y-6">
@@ -837,6 +904,7 @@ function OnlineGame({ onSwitchToLocal }) {
      content = renderPlaying();
      bgClass = gameState.turnState === 'correct' ? 'bg-green-600' : gameState.turnState === 'incorrect' ? 'bg-red-600' : 'bg-stone-900';
  }
+ else if (gameState.phase === 'summary') { content = renderSummary(); bgClass = "bg-stone-100"; }
  else if (gameState.phase === 'finished') { content = renderFinished(); bgClass = "bg-stone-800"; }
 
 
@@ -848,7 +916,7 @@ function OnlineGame({ onSwitchToLocal }) {
          {content}
          {/* Chat Button for Mobile */}
          <div className="md:hidden">
-            <button onClick={() => setIsChatOpen(true)} className="fixed bottom-6 right-6 bg-orange-500 text-white p-3 rounded-full shadow-xl hover:bg-orange-600 active:scale-95 z-40 flex items-center justify-center">
+            <button onClick={() => setIsChatOpen(true)} className="fixed bottom-6 right-6 bg-orange-500 text-white p-3 rounded-full shadow-xl hover:bg-orange-600 active:scale-95 z-40 flex items-center justify-center" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
               <MessageCircle size={24} />{hasUnread && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse"/>}
             </button>
          </div>
