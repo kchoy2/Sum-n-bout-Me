@@ -1,8 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
- <!-- Main 4-Point Star (Centered) -->
- <path d="M256 64c0 0 40 140 140 140s-140 40-140 140s-40-140-140-140s140-140 140-140z" fill="none" stroke="#f97316" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+ <!-- Main Symmetrical Curvy Star (Centered & Padded) -->
+ <!-- Uses center point (256,256) as the gravity for the curves -->
+ <path d="M256 80 Q256 256 432 256 Q256 256 256 432 Q256 256 80 256 Q256 256 256 80Z"
+       fill="none"
+       stroke="#f97316"
+       stroke-width="32"
+       stroke-linecap="round"
+       stroke-linejoin="round"/>
   <!-- Plus Sign (Top Right) -->
- <path d="M390 80h60M420 50v60" fill="none" stroke="#f97316" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+ <path d="M380 100 h60 M410 70 v60"
+       fill="none"
+       stroke="#f97316"
+       stroke-width="32"
+       stroke-linecap="round"
+       stroke-linejoin="round"/>
   <!-- Small Circle (Bottom Left) -->
- <circle cx="120" cy="392" r="24" fill="none" stroke="#f97316" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+ <circle cx="100" cy="412" r="30"
+         fill="none"
+         stroke="#f97316"
+         stroke-width="32"
+         stroke-linecap="round"
+         stroke-linejoin="round"/>
 </svg>
