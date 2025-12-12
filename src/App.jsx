@@ -192,10 +192,10 @@ const generateAICommentary = async (type, context = {}) => {
 
 
 const generateAISecretSuggestion = async () => {
- if (!GEMINI_API_KEY) return SECRET_SUGGESTIONS[Math.floor(Math.random() * SECRET_SUGGESTIONS.length)];
+ if (!apiKey) return SECRET_SUGGESTIONS[Math.floor(Math.random() * SECRET_SUGGESTIONS.length)];
  const prompt = "Give me one funny, specific, safe-for-work 'Never have I ever' style fact or secret. Examples: 'I've never eaten a taco', 'I own 50 rubber ducks'. Just the fact, no quotes.";
  try {
-   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`, {
+   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
    });
    const data = await response.json();
@@ -964,4 +964,3 @@ export default function App() {
  if (mode === 'local') return <LocalGame onBack={() => setMode('online')} />;
  return <OnlineGame onSwitchToLocal={() => setMode('local')} />;
 }
-
