@@ -42,7 +42,11 @@ import {
  Minimize2,
  Wand2,
  ScrollText,
- Eye
+ Settings,
+ SkipForward,
+ Eye,
+ Edit2,
+ Power
 } from 'lucide-react';
 
 
@@ -66,6 +70,9 @@ const GEMINI_API_KEY = "";
 
 
 // --- Constants ---
+const ROOM_TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 Hours
+
+
 const FUNNY_PLACEHOLDERS = [
  "I once ate a whole pizza in 4 minutes...",
  "I have a irrational fear of balloons...",
@@ -152,21 +159,18 @@ const WAITING_MESSAGES = [
  "{name} is having a main character moment...",
  "Loading {name}'s intuition...",
  "Silence! {name} is thinking.",
- "I bet {name} picks the wrong one."
+ "I bet {name} picks the wrong one.",
+ "{name} is buffering...",
+ "Any day now, {name}...",
+ "I hope {name} didn't drop their phone in the toilet."
 ];
 
 
 // --- AI Helpers ---
-
-
 const generateAICommentary = async (type, context = {}) => {
  if (!GEMINI_API_KEY) return getRandomFallback(type);
-
-
  let prompt = "";
  const style = "You are a witty, Gen Z/Millennial party game host. Use slang like 'tea', 'shook', 'main character energy'. Be brief (max 15 words).";
-
-
  switch (type) {
    case 'start': prompt = `${style} The game "Sum'n 'bout Me" just started. Hype it up.`; break;
    case 'correct': prompt = `${style} ${context.guesser} correctly guessed the secret "${context.secret}" belonged to ${context.owner}. React with shock/validation.`; break;
@@ -177,43 +181,29 @@ const generateAICommentary = async (type, context = {}) => {
    case 'replay': prompt = `${style} They want to play again. Hype them up!`; break;
    default: return getRandomFallback(type);
  }
-
-
  try {
    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`, {
-     method: 'POST',
-     headers: { 'Content-Type': 'application/json' },
-     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
    });
    const data = await response.json();
    return data.candidates?.[0]?.content?.parts?.[0]?.text || getRandomFallback(type);
- } catch (e) {
-   console.error("AI Error:", e);
-   return getRandomFallback(type);
- }
+ } catch (e) { return getRandomFallback(type); }
 };
 
 
 const generateAISecretSuggestion = async () => {
- if (!GEMINI_API_KEY) {
-    return SECRET_SUGGESTIONS[Math.floor(Math.random() * SECRET_SUGGESTIONS.length)];
- }
-  const prompt = "Give me one funny, specific, safe-for-work 'Never have I ever' style fact or secret. Examples: 'I've never eaten a taco', 'I own 50 rubber ducks'. Just the fact, no quotes.";
-  try {
+ if (!GEMINI_API_KEY) return SECRET_SUGGESTIONS[Math.floor(Math.random() * SECRET_SUGGESTIONS.length)];
+ const prompt = "Give me one funny, specific, safe-for-work 'Never have I ever' style fact or secret. Examples: 'I've never eaten a taco', 'I own 50 rubber ducks'. Just the fact, no quotes.";
+ try {
    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`, {
-     method: 'POST',
-     headers: { 'Content-Type': 'application/json' },
-     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
    });
    const data = await response.json();
    return data.candidates?.[0]?.content?.parts?.[0]?.text || SECRET_SUGGESTIONS[Math.floor(Math.random() * SECRET_SUGGESTIONS.length)];
- } catch (e) {
-   return SECRET_SUGGESTIONS[Math.floor(Math.random() * SECRET_SUGGESTIONS.length)];
- }
+ } catch (e) { return SECRET_SUGGESTIONS[Math.floor(Math.random() * SECRET_SUGGESTIONS.length)]; }
 };
 
 
-// Fallback Scripts
 const BOT_SCRIPTS = {
  intro: ["Greetings, who dis?", "I've arrived. Spill the tea.", "Welcome to the lobby. Don't be shy.", "Sum'n Bot in the house. Who are you?"],
  guessing: ["Hmm... I wonder...", "This is a tough one.", "I'm sensing confusion.", "Don't overthink it...", "Tick tock..."],
@@ -240,20 +230,14 @@ const Confetti = () => {
    const colors = ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#a855f7', '#ec4899'];
    const newParticles = [];
    for(let i=0; i<50; i++) {
-     newParticles.push({
-       id: i, x: Math.random() * 100,
-       color: colors[Math.floor(Math.random() * colors.length)],
-       delay: Math.random() * 0.5, duration: 2 + Math.random() * 2, rotation: Math.random() * 360
-     });
+     newParticles.push({ id: i, x: Math.random() * 100, color: colors[Math.floor(Math.random() * colors.length)], delay: Math.random() * 0.5, duration: 2 + Math.random() * 2, rotation: Math.random() * 360 });
    }
    setParticles(newParticles);
  }, []);
  return (
    <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
      <style>{`@keyframes fall { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }`}</style>
-     {particles.map(p => (
-       <div key={p.id} className="absolute w-3 h-3 rounded-sm" style={{ left: `${p.x}%`, top: `-20px`, backgroundColor: p.color, transform: `rotate(${p.rotation}deg)`, animation: `fall ${p.duration}s linear ${p.delay}s forwards` }} />
-     ))}
+     {particles.map(p => (<div key={p.id} className="absolute w-3 h-3 rounded-sm" style={{ left: `${p.x}%`, top: `-20px`, backgroundColor: p.color, transform: `rotate(${p.rotation}deg)`, animation: `fall ${p.duration}s linear ${p.delay}s forwards` }} />))}
    </div>
  );
 };
@@ -262,7 +246,7 @@ const Confetti = () => {
 const CyclingWaitingMessage = ({ name }) => {
  const [index, setIndex] = useState(0);
  useEffect(() => {
-   const interval = setInterval(() => { setIndex((prev) => (prev + 1) % WAITING_MESSAGES.length); }, 3000);
+   const interval = setInterval(() => { setIndex((prev) => (prev + 1) % WAITING_MESSAGES.length); }, 6000);
    return () => clearInterval(interval);
  }, []);
  return (
@@ -314,6 +298,59 @@ function ChatPanel({ messages, onSendMessage, currentPlayerName, onClose, isMobi
 }
 
 
+// --- ADMIN COMPONENTS ---
+function AdminModal({ isOpen, onClose, players, onKick, onSkip, onEndGame, currentPhase }) {
+   if (!isOpen) return null;
+   return (
+       <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
+           <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl space-y-6">
+               <div className="flex justify-between items-center border-b pb-4">
+                   <h3 className="text-xl font-black text-red-600 flex items-center gap-2"><Settings/> Host Controls</h3>
+                   <button onClick={onClose}><X className="text-gray-400"/></button>
+               </div>
+              
+               <div className="space-y-3">
+                   <p className="text-xs font-bold text-gray-500 uppercase">Game Actions</p>
+                  
+                   {currentPhase === 'playing' && (
+                       <button onClick={() => { onSkip(); onClose(); }} className="w-full bg-orange-100 text-orange-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-orange-200">
+                           <SkipForward size={20}/> Skip Current Turn
+                       </button>
+                   )}
+                  
+                   <button onClick={() => { if(confirm("End game and return to lobby?")) { onEndGame(); onClose(); } }} className="w-full bg-red-100 text-red-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-200">
+                       <Power size={20}/> End Game
+                   </button>
+               </div>
+
+
+               <div className="space-y-2 max-h-60 overflow-y-auto">
+                   <p className="text-xs font-bold text-gray-500 uppercase">Manage Players (Kick)</p>
+                   {players.map(p => (
+                       <div key={p.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                           <span className="font-bold text-gray-700">{p.name}</span>
+                           <button onClick={() => { if(confirm(`Kick ${p.name}?`)) onKick(p.id); }} className="text-red-500 hover:bg-red-50 p-2 rounded-full"><Trash2 size={18}/></button>
+                       </div>
+                   ))}
+               </div>
+              
+               <button onClick={onClose} className="w-full bg-gray-200 text-gray-600 font-bold py-3 rounded-xl">Close</button>
+           </div>
+       </div>
+   );
+}
+
+
+const AdminButton = ({ onClick, isHost }) => {
+   if (!isHost) return null;
+   return (
+       <button onClick={onClick} className="absolute top-4 left-4 bg-gray-900/10 backdrop-blur-md p-2 rounded-full text-gray-800 z-50 hover:bg-white/40 transition-all shadow-sm border border-black/5" title="Host Settings">
+           <Settings size={24} />
+       </button>
+   );
+};
+
+
 // --- LOCAL PASS-N-PLAY COMPONENT ---
 function LocalGame({ onBack }) {
    const [phase, setPhase] = useState('lobby');
@@ -336,7 +373,7 @@ function LocalGame({ onBack }) {
 
    const addPlayer = () => { if (inputValue.trim()) { setPlayers([...players, { id: Date.now(), name: inputValue.trim(), fact: '' }]); setInputValue(''); }};
    const removePlayer = (id) => setPlayers(players.filter(p => p.id !== id));
-   const startInputPhase = () => { if (players.length > 1) { setPhase('input'); setCurrentPlayerInputIndex(0); }};
+   const startInputPhase = () => { if (players.length > 0) { setPhase('input'); setCurrentPlayerInputIndex(0); }};
   
    const getAISuggestion = async () => {
        setAiLoading(true);
@@ -402,10 +439,10 @@ function LocalGame({ onBack }) {
                        <button onClick={() => removePlayer(p.id)} className="text-red-400"><Trash2 size={16}/></button>
                    </div>
                    ))}
-                   {players.length === 0 && <p className="text-center text-gray-400 text-sm italic">Add at least 2 players</p>}
+                   {players.length === 0 && <p className="text-center text-gray-400 text-sm italic">Add at least 1 player</p>}
                </div>
                <div className="flex flex-col gap-3 mt-4">
-                   <button onClick={startInputPhase} disabled={players.length < 2} className="w-full bg-orange-500 text-white font-bold py-3 rounded-xl shadow-lg disabled:opacity-50 hover:bg-orange-600">Start Game</button>
+                   <button onClick={startInputPhase} disabled={players.length < 1} className="w-full bg-orange-500 text-white font-bold py-3 rounded-xl shadow-lg disabled:opacity-50 hover:bg-orange-600">Start Game</button>
                    <button onClick={onBack} className="w-full text-gray-500 font-bold py-3">Back to Home</button>
                </div>
                </div>
@@ -452,6 +489,10 @@ function LocalGame({ onBack }) {
    if (phase === 'finished') return <div className="fixed inset-0 w-full h-full overflow-y-auto bg-stone-800"><div className="min-h-full flex flex-col justify-center p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}><div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 text-center space-y-6"><h1 className="text-3xl font-black text-gray-800">That's Sum'n 'bout E'erbody!</h1><p className="text-gray-500 italic">"{randomGameOverLine}"</p><div className="grid grid-cols-2 gap-4"><div className="bg-orange-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-orange-600">{players.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Friends</span></div><div className="bg-rose-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-rose-600">{deck.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Secrets</span></div></div><div className="space-y-3"><button onClick={()=>setPhase('lobby')} className="w-full bg-orange-600 text-white font-bold py-3 rounded-xl">Play Again</button><button onClick={onBack} className="w-full text-gray-400 font-bold py-3">Back to Home</button></div></div></div></div>;
   
    const card = deck[currentCardIndex];
+   // Safety check
+   if (!card) return <div className="flex h-full items-center justify-center"><Loader className="animate-spin text-orange-500"/></div>;
+
+
    const currP = players[turnIndex%players.length];
    return <div className={`fixed inset-0 w-full h-full overflow-y-auto ${turnState==='correct'?'bg-green-600':turnState==='incorrect'?'bg-red-600':'bg-stone-900'} transition-colors duration-500`}><div className="min-h-full flex flex-col justify-center p-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}><div className="w-full max-w-md mx-auto z-10 space-y-6"><div className="text-center mb-6"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {currentCardIndex+1} of {deck.length}</span></div><div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[500px] flex flex-col"><div className="p-4 bg-orange-50 border-b flex items-center justify-center gap-2"><span className="text-xl font-black text-orange-700">{currP.name} is guessing</span></div><div className="p-8 flex-1 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 border-b">
    <style>{`@keyframes flipIn { 0% { transform: rotateY(90deg); opacity: 0; } 100% { transform: rotateY(0deg); opacity: 1; } }`}</style>
@@ -465,13 +506,17 @@ function OnlineGame({ onSwitchToLocal }) {
  const [roomCode, setRoomCode] = useState('SHELTERS');
  const [showOfflineOption, setShowOfflineOption] = useState(false);
  const [confirmStart, setConfirmStart] = useState(false);
-  const [inputName, setInputName] = useState('');
+ const [isAdminOpen, setIsAdminOpen] = useState(false);
+
+
+ const [inputName, setInputName] = useState('');
  const [showQR, setShowQR] = useState(false);
   const [joined, setJoined] = useState(false);
  const [gameState, setGameState] = useState(null);
  const [loading, setLoading] = useState(false);
  const [error, setError] = useState('');
  const [selectedGuessedPlayer, setSelectedGuessedPlayer] = useState(null);
+  const [secretInput, setSecretInput] = useState('');
 
 
  // Chat State
@@ -494,9 +539,20 @@ function OnlineGame({ onSwitchToLocal }) {
  }, [gameState?.phase]);
 
 
+ // Load local storage on mount
  useEffect(() => {
-   const timer = setTimeout(() => setShowOfflineOption(true), 3000);
+   const savedName = localStorage.getItem('sumn_player_name');
+   const savedRoom = localStorage.getItem('sumn_room_code');
+   if (savedName) setInputName(savedName);
+   if (savedRoom) setRoomCode(savedRoom);
   
+   // Check for room param from QR code
+   const params = new URLSearchParams(window.location.search);
+   const roomParam = params.get('room');
+   if (roomParam) setRoomCode(roomParam);
+
+
+   const timer = setTimeout(() => setShowOfflineOption(true), 3000);
    const initAuth = async () => {
      try {
        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -534,11 +590,11 @@ function OnlineGame({ onSwitchToLocal }) {
        }
      } else {
        setGameState(null);
-       if (joined) { setJoined(false); setError("Room closed."); }
+       setJoined(false); setError("Room closed.");
      }
    }, (err) => {
      console.error("Snapshot error:", err);
-     setError("Lost connection to the room.");
+     setError("Connection lost.");
    });
    return () => unsubscribe();
  }, [user, joined, roomCode, isChatOpen]);
@@ -547,6 +603,7 @@ function OnlineGame({ onSwitchToLocal }) {
  useEffect(() => { if (isChatOpen) setHasUnread(false); }, [isChatOpen]);
 
 
+ // ... (Actions like botSpeak, handleSendMessage, handleJoin etc.) ...
  const botSpeak = async (type, context = {}) => {
      const text = await generateAICommentary(type, context);
      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
@@ -565,120 +622,60 @@ function OnlineGame({ onSwitchToLocal }) {
    if (!inputName.trim() || !roomCode.trim()) { setError("Name and Room Code required."); return; }
    setLoading(true);
    const code = roomCode.toUpperCase();
+   localStorage.setItem('sumn_player_name', inputName.trim());
+   localStorage.setItem('sumn_room_code', code);
    const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', code);
    try {
      const snap = await getDoc(roomRef);
      const newPlayer = { id: user.uid, name: inputName.trim(), fact: '', ready: false };
      if (!snap.exists()) {
-       await setDoc(roomRef, { players: [newPlayer], phase: 'lobby', deck: [], messages: [], currentCardIndex: 0, turnState: 'guessing', lastGuessedName: '', turnIndex: 0, guesserName: '', hostId: user.uid });
+       await setDoc(roomRef, { players: [newPlayer], phase: 'lobby', deck: [], messages: [], currentCardIndex: 0, turnState: 'guessing', lastGuessedName: '', turnIndex: 0, guesserName: '', hostId: user.uid, createdAt: Date.now() });
      } else {
        const data = snap.data();
-       let updatedPlayers = [...data.players];
-       const existingIndex = updatedPlayers.findIndex(p => p.id === user.uid);
-      
-       if (existingIndex >= 0) {
-            updatedPlayers[existingIndex].name = inputName.trim();
-            await updateDoc(roomRef, { players: updatedPlayers });
+       if (data.createdAt && (Date.now() - data.createdAt > ROOM_TIMEOUT_MS)) {
+           await setDoc(roomRef, { players: [newPlayer], phase: 'lobby', deck: [], messages: [], currentCardIndex: 0, turnState: 'guessing', lastGuessedName: '', turnIndex: 0, guesserName: '', hostId: user.uid, createdAt: Date.now() });
        } else {
-            if (data.phase === 'lobby') {
-               updatedPlayers.push(newPlayer);
-               await updateDoc(roomRef, { players: updatedPlayers });
-            } else {
-               // Game in progress: Spectator mode (don't add to DB)
-            }
+           let updatedPlayers = [...data.players];
+           const existingIndex = updatedPlayers.findIndex(p => p.id === user.uid);
+          
+           if (existingIndex >= 0) {
+                updatedPlayers[existingIndex].name = inputName.trim();
+                let newHostId = data.hostId;
+                // Self-healing host assignment
+                if (!updatedPlayers.find(p => p.id === data.hostId)) { newHostId = user.uid; }
+                await updateDoc(roomRef, { players: updatedPlayers, hostId: newHostId });
+           } else {
+                if (data.phase === 'lobby') {
+                   updatedPlayers.push(newPlayer);
+                   let newHostId = data.hostId;
+                   if (!updatedPlayers.find(p => p.id === data.hostId)) { newHostId = user.uid; }
+                   await updateDoc(roomRef, { players: updatedPlayers, hostId: newHostId });
+                }
+           }
        }
      }
      setJoined(true); setError('');
    } catch (err) { console.error(err); setError("Join failed."); }
    setLoading(false);
  };
-
-
- const handleLeave = async () => {
-   if (joined && roomCode) {
-       try {
-           const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-           const snap = await getDoc(roomRef);
-           if (snap.exists()) {
-               const data = snap.data();
-               if (data.hostId === user.uid) await deleteDoc(roomRef);
-               else {
-                   const updatedPlayers = data.players.filter(p => p.id !== user.uid);
-                   if (updatedPlayers.length === 0) await deleteDoc(roomRef); else await updateDoc(roomRef, { players: updatedPlayers });
-               }
-           }
-       } catch (err) {}
-   }
-   setJoined(false); setGameState(null); setError('');
+  // Define other handlers...
+ const handleLeave = async () => { setJoined(false); setGameState(null); setError(''); };
+ const handleKickPlayer = async (pid) => { const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); const updated = gameState.players.filter(p=>p.id!==pid); await updateDoc(roomRef, {players:updated}); };
+ const handleSkipTurn = async () => { const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); const nextT = ((gameState.turnIndex||0)+1)%gameState.players.length; await updateDoc(roomRef, {turnIndex:nextT, turnState:'guessing'}); await botSpeak('next'); };
+ const handleEndGame = async () => {
+     const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
+     const resetPlayers = gameState.players.map(p => ({ ...p, fact: '', ready: false }));
+     await updateDoc(roomRef, { phase: 'lobby', players: resetPlayers, deck: [], currentCardIndex: 0, turnState: 'guessing', turnIndex: 0, guesserName: '' });
  };
+ const submitFact = async (val) => { if(!gameState) return; const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); const updated = gameState.players.map(p => p.id === user.uid ? { ...p, fact: val, ready: true } : p); await updateDoc(roomRef, { players: updated }); };
+ const updateFact = async () => { if(!gameState) return; const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); const updated = gameState.players.map(p => p.id === user.uid ? { ...p, ready: false } : p); await updateDoc(roomRef, { players: updated }); };
+  const startGame = async () => { const valid = gameState.players.filter(p => p.fact && p.fact.trim().length > 0); if(valid.length<1) return; const deck = valid.map(p => ({ text: p.fact, owner: p.name, ownerId: p.id })); for(let i=deck.length-1; i>0; i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];} const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); await botSpeak('start'); await updateDoc(roomRef, { phase: 'playing', deck, currentCardIndex: 0, turnState: 'guessing', turnIndex: 0, guesserName: '', lastGuessedName: '' }); };
+ const handleGuess = async () => { if (!selectedGuessedPlayer || !gameState) return; const card = gameState.deck[gameState.currentCardIndex]; const correct = selectedGuessedPlayer.id === card.ownerId; const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); const turnIdx = (gameState.turnIndex||0)%gameState.players.length; const guesser = gameState.players[turnIdx]; await botSpeak(correct?'correct':'incorrect', {guesser:guesser?.name, target:selectedGuessedPlayer.name, owner:card.owner, secret:card.text}); await updateDoc(roomRef, {turnState:correct?'correct':'incorrect', lastGuessedName:selectedGuessedPlayer.name, guesserName:guesser?.name}); setSelectedGuessedPlayer(null); };
+ const handleNextAfterResult = async () => { const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); const nextT = ((gameState.turnIndex||0)+1)%gameState.players.length; await botSpeak('next'); if(gameState.turnState==='correct'){const nextC = gameState.currentCardIndex+1; if(nextC>=gameState.deck.length) await updateDoc(roomRef,{phase:'summary'}); else await updateDoc(roomRef,{currentCardIndex:nextC, turnState:'guessing', turnIndex:nextT, lastGuessedName:'', guesserName:''});} else {const newDeck=[...gameState.deck]; const card=newDeck.splice(gameState.currentCardIndex,1)[0]; newDeck.push(card); await updateDoc(roomRef,{deck:newDeck, turnState:'guessing', turnIndex:nextT, lastGuessedName:'', guesserName:''});} };
+ const resetGame = async () => { const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); const reset = gameState.players.map(p => ({ ...p, fact: '', ready: false })); await botSpeak('replay'); await updateDoc(roomRef, { phase: 'lobby', players: reset, deck: [], currentCardIndex: 0, turnState: 'guessing', turnIndex: 0, guesserName: '' }); };
 
 
- const submitFact = async (fact) => {
-   if (!gameState) return;
-   const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-   const updatedPlayers = gameState.players.map(p => p.id === user.uid ? { ...p, fact: fact, ready: true } : p);
-   await updateDoc(roomRef, { players: updatedPlayers });
- };
-
-
- const startGame = async () => {
-   const validPlayers = gameState.players.filter(p => p.fact && p.fact.trim().length > 0);
-   if (validPlayers.length < 1) return;
-   const deck = validPlayers.map(p => ({ text: p.fact, owner: p.name, ownerId: p.id }));
-   for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
-   const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-   await botSpeak('start');
-   await updateDoc(roomRef, { phase: 'playing', deck: deck, currentCardIndex: 0, turnState: 'guessing', turnIndex: 0, guesserName: '', lastGuessedName: '' });
- };
-
-
- const handleGuess = async () => {
-   if (!selectedGuessedPlayer || !gameState) return;
-   const currentCard = gameState.deck[gameState.currentCardIndex];
-   const isCorrect = selectedGuessedPlayer.id === currentCard.ownerId;
-   const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-   const turnIdx = (gameState.turnIndex || 0) % gameState.players.length;
-   const currentGuesser = gameState.players[turnIdx];
-  
-   const context = {
-       guesser: currentGuesser?.name || "Someone",
-       target: selectedGuessedPlayer.name,
-       owner: currentCard.owner,
-       secret: currentCard.text
-   };
-   await botSpeak(isCorrect ? 'correct' : 'incorrect', context);
-
-
-   await updateDoc(roomRef, { turnState: isCorrect ? 'correct' : 'incorrect', lastGuessedName: selectedGuessedPlayer.name, guesserName: currentGuesser ? currentGuesser.name : 'Someone' });
-   setSelectedGuessedPlayer(null);
- };
-
-
- const handleNextAfterResult = async () => {
-   if (!gameState) return;
-   const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-   const nextTurnIndex = ((gameState.turnIndex || 0) + 1) % gameState.players.length;
-   await botSpeak('next');
-   if (gameState.turnState === 'correct') {
-       const nextIndex = gameState.currentCardIndex + 1;
-       if (nextIndex >= gameState.deck.length) await updateDoc(roomRef, { phase: 'summary' });
-       else await updateDoc(roomRef, { currentCardIndex: nextIndex, turnState: 'guessing', turnIndex: nextTurnIndex, lastGuessedName: '', guesserName: '' });
-   } else {
-       const newDeck = [...gameState.deck]; const currentCard = newDeck[gameState.currentCardIndex]; newDeck.splice(gameState.currentCardIndex, 1); newDeck.push(currentCard);
-       await updateDoc(roomRef, { deck: newDeck, turnState: 'guessing', turnIndex: nextTurnIndex, lastGuessedName: '', guesserName: '' });
-   }
- };
-
-
- const resetGame = async () => {
-   const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-   const resetPlayers = gameState.players.map(p => ({ ...p, fact: '', ready: false }));
-   await botSpeak('replay');
-   await updateDoc(roomRef, { phase: 'lobby', players: resetPlayers, deck: [], currentCardIndex: 0, turnState: 'guessing', turnIndex: 0, guesserName: '' });
- };
-
-
- // --- RENDER CONTENT HELPERS ---
+ // --- RENDER FUNCTIONS ---
  const renderJoinScreen = () => (
    <div className="flex flex-col justify-center h-full p-4">
      <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8">
@@ -688,7 +685,7 @@ function OnlineGame({ onSwitchToLocal }) {
        <div className="space-y-4">
          <div><label className="block text-sm font-bold text-gray-700 mb-1">Your Name</label><input type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-gray-300 outline-none bg-white text-gray-900 text-base" placeholder="Enter your name"/></div>
          <div><label className="block text-sm font-bold text-gray-700 mb-1">Room Code</label><input type="text" value={roomCode} onChange={(e) => setRoomCode(e.target.value)} className="w-full px-4 py-3 rounded-lg border border-gray-300 outline-none uppercase tracking-widest bg-white text-gray-900 text-base" placeholder="Enter Room Code"/></div>
-         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+         {error && <p className="text-red-500 text-sm text-center">{typeof error==='string'?error:'Error'}</p>}
          <button onClick={handleJoin} disabled={loading || !inputName || !roomCode} className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg shadow-lg transition active:scale-95 disabled:opacity-50">{loading ? "Joining..." : "Join Party"}</button>
          <button onClick={onSwitchToLocal} className="w-full text-gray-400 font-bold text-sm py-2 hover:text-gray-600 flex items-center justify-center gap-2"><Smartphone size={16}/> Switch to Pass-n-Play Mode</button>
        </div>
@@ -705,27 +702,17 @@ function OnlineGame({ onSwitchToLocal }) {
        <div className="bg-white rounded-xl shadow-sm p-6 text-center border-b-4 border-orange-200">
            <h2 className="text-xl font-bold text-gray-800">Room: {roomCode.toUpperCase()}</h2>
            <div className="flex justify-center items-center gap-2 mt-2"><button onClick={() => setShowQR(!showQR)} className="text-xs flex items-center gap-1 bg-orange-50 text-orange-600 px-3 py-1 rounded-full hover:bg-orange-100 transition"><QrCode size={14} /> {showQR ? "Hide" : "Show QR"}</button></div>
-           {showQR && <div className="mt-4 flex justify-center"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}`} alt="QR" className="w-32 h-32 border-2 border-gray-100 rounded-xl"/></div>}
+           {showQR && <div className="mt-4 flex justify-center"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href + '?room=' + roomCode)}`} alt="QR" className="w-32 h-32 border-2 border-gray-100 rounded-xl"/></div>}
        </div>
        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
            <div className="p-4 bg-gray-100 border-b flex justify-between items-center"><span className="font-bold text-gray-700 flex items-center gap-2"><Users size={18}/> Players ({players.length})</span></div>
            <ul className="divide-y max-h-[40vh] overflow-y-auto">
-               {players.map(p => (<li key={p.id} className="p-4 flex items-center justify-between"><span className="font-medium text-gray-800">{p.name}</span>{p.id === user.uid && <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">You</span>}</li>))}
+               {players.map(p => (<li key={p.id} className="p-4 flex items-center justify-between"><span className="font-medium text-gray-800">{p.name} {gameState.hostId === p.id && <span className="text-[10px] bg-yellow-100 text-yellow-600 px-1 rounded border border-yellow-200 ml-1">HOST</span>}</span>{p.id === user.uid && <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">You</span>}</li>))}
            </ul>
        </div>
        <div className="space-y-3">
-           {!confirmStart ? (
-              <button onClick={() => setConfirmStart(true)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-2">Start Sum'n <Play size={20} /></button>
-           ) : (
-              <div className="flex gap-2">
-                 <button onClick={async () => {
-                     const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-                     if (gameState?.messages?.length === 0) await botSpeak('intro');
-                     await updateDoc(roomRef, { phase: 'input' });
-                 }} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg">Confirm Start</button>
-                 <button onClick={() => setConfirmStart(false)} className="w-1/3 bg-gray-200 text-gray-600 font-bold py-4 rounded-xl">Wait</button>
-              </div>
-           )}
+           {!confirmStart ? <button onClick={() => setConfirmStart(true)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-2">Start Sum'n <Play size={20} /></button>
+           : <div className="flex gap-2"><button onClick={async () => { const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); if (gameState?.messages?.length === 0) await botSpeak('intro'); await updateDoc(roomRef, { phase: 'input' }); }} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg">Confirm Start</button><button onClick={() => setConfirmStart(false)} className="w-1/3 bg-gray-200 text-gray-600 font-bold py-4 rounded-xl">Wait</button></div>}
            <button onClick={handleLeave} className="w-full font-bold py-3 rounded-xl border flex items-center justify-center gap-2 bg-white text-gray-500 border-gray-200 hover:bg-gray-50">{gameState?.hostId === user.uid ? <><Trash2 size={18} /> Close Room</> : <><LogOut size={18} /> Leave Room</>}</button>
        </div>
      </div>
@@ -736,33 +723,11 @@ function OnlineGame({ onSwitchToLocal }) {
 
  const renderInput = () => {
    const myPlayer = gameState.players.find(p => p.id === user.uid);
-   // Spectator View (Joined late)
-   if (!myPlayer) {
-       return (
-           <div className="flex flex-col justify-center h-full p-4">
-               <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
-                   <div className="flex justify-center"><div className="bg-orange-100 p-3 rounded-full"><Eye size={32} className="text-orange-500"/></div></div>
-                   <h2 className="text-2xl font-black text-gray-800">Game in Progress</h2>
-                   <p className="text-gray-600">You joined late, so you are in <span className="font-bold text-orange-600">Spectator Mode</span>. You can watch the fun but can't play this round.</p>
-                   <button onClick={handleLeave} className="w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-xl">Leave Room</button>
-               </div>
-           </div>
-       );
-   }
-
-
+   if (!myPlayer) return <div className="flex flex-col justify-center h-full p-4"><div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 text-center space-y-6"><div className="flex justify-center"><div className="bg-orange-100 p-3 rounded-full"><Eye size={32} className="text-orange-500"/></div></div><h2 className="text-2xl font-black text-gray-800">Game in Progress</h2><p className="text-gray-600">You joined late, so you are in <span className="font-bold text-orange-600">Spectator Mode</span>.</p><button onClick={handleLeave} className="w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-xl">Leave Room</button></div></div>;
    const completedCount = gameState.players.filter(p => p.ready).length;
    const totalCount = gameState.players.length;
-   const waitingFor = gameState.players.filter(p => !p.ready).map(p => p.name);
-
-
-   const getAISuggestion = async () => {
-       setAiLoading(true);
-       const suggestion = await generateAISecretSuggestion();
-       const inputEl = document.getElementById('factInput');
-       if (inputEl) inputEl.value = suggestion;
-       setAiLoading(false);
-   };
+   const readyPlayers = gameState.players.filter(p => p.ready);
+   const waitingPlayers = gameState.players.filter(p => !p.ready);
 
 
    return (
@@ -772,18 +737,27 @@ function OnlineGame({ onSwitchToLocal }) {
            <div className={`p-6 rounded-2xl shadow-md border-2 transition-all ${myPlayer.ready ? 'bg-green-50 border-green-200' : 'bg-white border-orange-100'}`}>
                {!myPlayer.ready ? (
                    <div className="flex flex-col gap-3">
-                       <textarea className="w-full p-3 rounded-lg border border-gray-200 focus:border-orange-500 outline-none resize-none bg-white text-gray-900 text-base" placeholder={randomPlaceholder} rows={3} id="factInput"/>
-                       <div className="flex justify-end"><button onClick={getAISuggestion} className="text-xs font-bold text-orange-600 flex items-center gap-1 hover:text-orange-800 transition">{aiLoading ? "Thinking..." : <><Wand2 size={12}/> ✨ Help me write</>}</button></div>
-                       <button onClick={() => { const val = document.getElementById('factInput').value; if(val.trim()) submitFact(val); }} className="w-full bg-orange-500 text-white font-bold py-2 rounded-lg">Submit Secret</button>
+                       <textarea className="w-full p-3 rounded-lg border border-gray-200 focus:border-orange-500 outline-none resize-none bg-white text-gray-900 text-base" placeholder={randomPlaceholder} rows={3} id="factInput" value={secretInput} onChange={e=>setSecretInput(e.target.value)}/>
+                       <div className="flex justify-end"><button onClick={async()=>{setAiLoading(true);const s=await generateAISecretSuggestion();setSecretInput(s);setAiLoading(false);}} className="text-xs font-bold text-orange-600 flex items-center gap-1 hover:text-orange-800 transition animate-pulse">{aiLoading ? "Thinking..." : <><Wand2 size={12}/> ✨ Help me write</>}</button></div>
+                       <button onClick={() => { if(secretInput.trim()) submitFact(secretInput); }} className="w-full bg-orange-500 text-white font-bold py-2 rounded-lg">Submit Secret</button>
                    </div>
-               ) : (<p className="text-green-700 italic text-center">Secret locked in.</p>)}
+               ) : (
+                   <div className="text-center space-y-2">
+                       <p className="text-green-700 italic font-bold">Secret locked in.</p>
+                       <p className="text-gray-500 italic text-sm">(Secret hidden 🙈)</p>
+                       <button onClick={() => { setSecretInput(myPlayer.fact); updateFact(); }} className="text-orange-600 font-bold text-sm hover:underline flex items-center justify-center gap-1"><Edit2 size={14}/> Edit Secret</button>
+                   </div>
+               )}
            </div>
-           <div className="bg-white rounded-xl p-4 shadow-sm">
-               <div className="flex justify-between text-sm font-bold text-gray-500 mb-2"><span>Group Progress</span><span>{completedCount}/{totalCount} Ready</span></div>
+           <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
+               <div className="flex justify-between text-sm font-bold text-gray-500"><span>Group Progress</span><span>{completedCount}/{totalCount} Ready</span></div>
                <div className="w-full bg-gray-200 rounded-full h-3"><div className="bg-green-500 h-3 rounded-full transition-all duration-500" style={{ width: `${(completedCount / totalCount) * 100}%` }}/></div>
-               {waitingFor.length > 0 && <div className="mt-3 text-xs text-center text-gray-400">Waiting for: <span className="font-bold text-gray-500">{waitingFor.join(', ')}</span></div>}
+               <div className="grid grid-cols-2 gap-4 text-xs mt-2">
+                   <div><p className="font-bold text-green-600 mb-1">✅ Locked In</p><ul className="text-gray-500 space-y-1">{readyPlayers.map(p => <li key={p.id}>{p.name} {gameState.hostId === p.id && "(Host)"}</li>)}</ul></div>
+                   <div><p className="font-bold text-orange-500 mb-1">⏳ Waiting For</p><ul className="text-gray-500 space-y-1">{waitingPlayers.map(p => <li key={p.id}>{p.name} {gameState.hostId === p.id && "(Host)"}</li>)}</ul></div>
+               </div>
            </div>
-           <button onClick={startGame} disabled={completedCount < totalCount} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg transition active:scale-95 disabled:bg-gray-300 disabled:text-gray-500">{completedCount === totalCount ? "Everyone is Ready! Start Game" : "Waiting for players..."}</button>
+           {gameState.hostId === user.uid && <button onClick={startGame} disabled={completedCount < 1} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg transition active:scale-95 disabled:bg-gray-300 disabled:text-gray-500">{completedCount === totalCount ? "Start Game!" : (completedCount < 1 ? "Waiting for players..." : `Start Game (Force ${totalCount - completedCount} to sit out)`)}</button>}
            <button onClick={handleLeave} className="w-full bg-white text-gray-500 font-bold py-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition flex items-center justify-center gap-2"><LogOut size={18} /> Leave / Back to Home</button>
        </div>
      </div>
@@ -793,20 +767,22 @@ function OnlineGame({ onSwitchToLocal }) {
 
  const renderPlaying = () => {
    const currentCard = gameState.deck[gameState.currentCardIndex];
+   if (!currentCard) return <div>Loading...</div>;
    const turnIdx = (gameState.turnIndex || 0) % gameState.players.length;
    const currentTurnPlayer = gameState.players[turnIdx];
    const isMyTurn = currentTurnPlayer?.id === user.uid;
+   const { currentCardIndex } = gameState; // FIX: Destructure here
 
 
    return (
      <div className="flex flex-col justify-center h-full p-4">
           <div className="relative w-full max-w-md mx-auto z-10 space-y-6">
-             <div className="text-center mb-6"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {gameState.currentCardIndex + 1} of {gameState.deck.length}</span></div>
+             <div className="text-center mb-6"><span className="bg-black/30 text-white px-3 py-1 rounded-full text-sm">Secret {currentCardIndex + 1} of {gameState.deck.length}</span></div>
              <div className="bg-white rounded-3xl shadow-2xl overflow-hidden min-h-[500px] flex flex-col">
                  <div className="p-4 bg-orange-50 border-b flex items-center justify-center gap-2"><span className="text-xl font-black text-orange-700">{currentTurnPlayer?.name} is guessing</span></div>
                  <div className="p-8 flex-1 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 border-b">
                    <style>{`@keyframes flipIn { 0% { transform: rotateY(90deg); opacity: 0; } 100% { transform: rotateY(0deg); opacity: 1; } }`}</style>
-                   <p key={gameState.currentCardIndex} className="text-2xl md:text-3xl font-black text-center text-gray-800 leading-tight" style={{ animation: 'flipIn 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}>"{currentCard.text}"</p>
+                   <p key={currentCardIndex} className="text-2xl md:text-3xl font-black text-center text-gray-800 leading-tight" style={{ animation: 'flipIn 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}>"{currentCard.text}"</p>
                  </div>
                 
                  <div className="flex-none p-6 bg-gray-50">
@@ -854,7 +830,7 @@ function OnlineGame({ onSwitchToLocal }) {
    const sortedPlayers = [...gameState.players].sort((a, b) => a.name.localeCompare(b.name));
    return (
      <div className="flex flex-col justify-center h-full p-4">
-       <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[80vh]">
+       <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col h-[80vh]">
            <div className="p-6 bg-orange-50 border-b border-orange-100 text-center">
                <h2 className="text-2xl font-black text-gray-800 flex items-center justify-center gap-2"><ScrollText className="text-orange-600"/> The Receipts</h2>
                <p className="text-sm text-orange-600">Here is who wrote what:</p>
@@ -881,8 +857,14 @@ function OnlineGame({ onSwitchToLocal }) {
        <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 text-center space-y-6">
            <h1 className="text-3xl font-black text-gray-800">That's Sum'n 'bout E'erbody!</h1>
            <p className="text-gray-500 italic">"{randomGameOverLine}"</p>
-           <button onClick={resetGame} className="w-full bg-orange-600 text-white font-bold py-3 rounded-xl">Play Again</button>
-           <button onClick={handleLeave} className="w-full text-gray-400 font-bold py-3">Back to Home</button>
+           <div className="grid grid-cols-2 gap-4">
+               <div className="bg-orange-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-orange-600">{gameState.players.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Friends</span></div>
+               <div className="bg-rose-50 p-4 rounded-xl"><span className="block text-3xl font-bold text-rose-600">{gameState.deck.length}</span><span className="text-xs text-gray-500 uppercase font-bold">Secrets</span></div>
+           </div>
+           <div className="space-y-3">
+               <button onClick={resetGame} className="w-full bg-orange-600 text-white font-bold py-3 rounded-xl">Play Again</button>
+               <button onClick={handleLeave} className="w-full text-gray-400 font-bold py-3">Back to Home</button>
+           </div>
        </div>
      </div>
  );
@@ -908,12 +890,13 @@ function OnlineGame({ onSwitchToLocal }) {
  else if (gameState.phase === 'finished') { content = renderFinished(); bgClass = "bg-stone-800"; }
 
 
- // If we are joined, we show the Split View (Desktop) or Mobile View
  return (
    <div className={`fixed inset-0 flex flex-col md:flex-row font-sans ${bgClass} transition-colors duration-500`}>
       {/* LEFT: Game Content */}
       <div className="relative flex-1 h-full overflow-y-auto overflow-x-hidden">
          {content}
+         <AdminButton isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} players={gameState?.players || []} onKick={handleKickPlayer} onSkip={handleSkipTurn} onEndGame={handleEndGame} currentPhase={gameState?.phase} isHost={gameState?.hostId === user?.uid} onClick={() => setIsAdminOpen(true)} />
+         <AdminModal isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} players={gameState?.players || []} onKick={handleKickPlayer} onSkip={handleSkipTurn} onEndGame={handleEndGame} currentPhase={gameState?.phase} />
          {/* Chat Button for Mobile */}
          <div className="md:hidden">
             <button onClick={() => setIsChatOpen(true)} className="fixed bottom-6 right-6 bg-orange-500 text-white p-3 rounded-full shadow-xl hover:bg-orange-600 active:scale-95 z-40 flex items-center justify-center" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
