@@ -46,8 +46,7 @@ import {
   SkipForward,
   Eye,
   Edit2,
-  Power,
-  AlertTriangle
+  Power
 } from 'lucide-react';
 
 // --- Firebase Configuration (StackBlitz Version) ---
@@ -485,6 +484,7 @@ function OnlineGame({ onSwitchToLocal }) {
   const [showOfflineOption, setShowOfflineOption] = useState(false);
   const [confirmStart, setConfirmStart] = useState(false); 
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isSpectator, setIsSpectator] = useState(false);
 
   const [inputName, setInputName] = useState('');
   const [showQR, setShowQR] = useState(false);
@@ -495,7 +495,7 @@ function OnlineGame({ onSwitchToLocal }) {
   const [error, setError] = useState('');
   const [selectedGuessedPlayer, setSelectedGuessedPlayer] = useState(null);
   
-  const [secretInput, setSecretInput] = useState(''); // Added missing state
+  const [secretInput, setSecretInput] = useState(''); 
 
   // Chat State
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -557,6 +557,16 @@ function OnlineGame({ onSwitchToLocal }) {
         const data = snapshot.data();
         setGameState(data);
         
+        // --- KICKED LOGIC ---
+        // If I am NOT a spectator, and I am NOT in the player list anymore, I was kicked.
+        const amIInList = data.players.some(p => p.id === user.uid);
+        if (!isSpectator && !amIInList && joined) {
+             setJoined(false);
+             setGameState(null);
+             setError("You have been kicked from the room.");
+             return;
+        }
+
         const msgs = data.messages || [];
         if (msgs.length > lastMsgCount.current) {
            if (!isChatOpen) setHasUnread(true);
@@ -571,7 +581,7 @@ function OnlineGame({ onSwitchToLocal }) {
       setError("Connection lost.");
     });
     return () => unsubscribe();
-  }, [user, joined, roomCode, isChatOpen]);
+  }, [user, joined, roomCode, isChatOpen, isSpectator]);
 
   useEffect(() => { if (isChatOpen) setHasUnread(false); }, [isChatOpen]);
 
@@ -598,6 +608,9 @@ function OnlineGame({ onSwitchToLocal }) {
     try {
       const snap = await getDoc(roomRef);
       const newPlayer = { id: user.uid, name: inputName.trim(), fact: '', ready: false };
+      
+      let isSpec = false;
+
       if (!snap.exists()) {
         await setDoc(roomRef, { players: [newPlayer], phase: 'lobby', deck: [], messages: [], currentCardIndex: 0, turnState: 'guessing', lastGuessedName: '', turnIndex: 0, guesserName: '', hostId: user.uid, createdAt: Date.now() });
       } else {
@@ -612,19 +625,23 @@ function OnlineGame({ onSwitchToLocal }) {
                  updatedPlayers[existingIndex].name = inputName.trim();
                  let newHostId = data.hostId;
                  if (!updatedPlayers.find(p => p.id === data.hostId)) { newHostId = user.uid; }
-                 // Restore kicked status logic if needed
                  if (updatedPlayers[existingIndex].isKicked) { updatedPlayers[existingIndex].isKicked = false; }
                  await updateDoc(roomRef, { players: updatedPlayers, hostId: newHostId });
             } else {
+                 // Joining new
                  if (data.phase === 'lobby' || data.phase === 'input') {
                     updatedPlayers.push(newPlayer);
                     let newHostId = data.hostId;
                     if (!updatedPlayers.find(p => p.id === data.hostId)) { newHostId = user.uid; }
                     await updateDoc(roomRef, { players: updatedPlayers, hostId: newHostId });
+                 } else {
+                    // Spectator
+                    isSpec = true;
                  }
             }
         }
       }
+      setIsSpectator(isSpec);
       setJoined(true); setError(''); 
     } catch (err) { console.error(err); setError("Join failed."); }
     setLoading(false);
@@ -632,30 +649,32 @@ function OnlineGame({ onSwitchToLocal }) {
   
   // Define other handlers...
   const handleLeave = async () => {
-    // Determine who new host should be if current user is host
+    // Leave Room (Pass Host) logic
     let newHostId = gameState?.hostId;
     let shouldDelete = false;
 
-    // Normal leave logic (remove player from list)
-    try {
-        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-        const currentPlayers = gameState?.players || [];
-        const updatedPlayers = currentPlayers.filter(p => p.id !== user.uid);
-        
-        if (updatedPlayers.length === 0) {
-            shouldDelete = true;
-        } else if (gameState?.hostId === user.uid) {
-            newHostId = updatedPlayers[0].id;
-        }
+    // We do NOT ask to close room here anymore (Admin menu does that).
+    // Just remove player from list if they are in it.
+    if (!isSpectator && gameState?.players) {
+        try {
+            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
+            const currentPlayers = gameState.players;
+            const updatedPlayers = currentPlayers.filter(p => p.id !== user.uid);
+            
+            if (updatedPlayers.length === 0) {
+                shouldDelete = true;
+            } else if (gameState.hostId === user.uid) {
+                newHostId = updatedPlayers[0].id;
+            }
 
-        if (shouldDelete) {
-            await deleteDoc(roomRef);
-        } else {
-            await updateDoc(roomRef, { players: updatedPlayers, hostId: newHostId });
-        }
-    } catch (err) { console.error("Error removing player:", err); }
-
-    setJoined(false); setGameState(null); setError(''); 
+            if (shouldDelete) {
+                await deleteDoc(roomRef);
+            } else {
+                await updateDoc(roomRef, { players: updatedPlayers, hostId: newHostId });
+            }
+        } catch (err) { console.error("Error removing player:", err); }
+    }
+    setJoined(false); setGameState(null); setError(''); setIsSpectator(false);
   };
 
   const handleCloseRoom = async () => {
@@ -665,13 +684,31 @@ function OnlineGame({ onSwitchToLocal }) {
   
   const handleKickPlayer = async (pid) => { 
       const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-      if (gameState.phase === 'playing') {
-          const updated = gameState.players.map(p => p.id === pid ? { ...p, isKicked: true } : p);
-          await updateDoc(roomRef, {players: updated});
-      } else {
-          const updated = gameState.players.filter(p=>p.id!==pid); 
-          await updateDoc(roomRef, {players:updated}); 
-      }
+      // Get fresh state just in case
+      try {
+        const snap = await getDoc(roomRef);
+        if (snap.exists()) {
+            const data = snap.data();
+            // Completely remove player from list
+            const updatedPlayers = data.players.filter(p => p.id !== pid);
+            
+            let updates = { players: updatedPlayers };
+
+            // If playing, also remove their card from deck to prevent stalling
+            if (data.phase === 'playing') {
+                 const updatedDeck = data.deck.filter(c => c.ownerId !== pid);
+                 updates.deck = updatedDeck;
+                 
+                 // Safety check index
+                 if (data.currentCardIndex >= updatedDeck.length) {
+                     updates.currentCardIndex = Math.max(0, updatedDeck.length - 1);
+                 }
+                 // If deck empty, end game?
+                 if (updatedDeck.length === 0) updates.phase = 'finished';
+            }
+            await updateDoc(roomRef, updates);
+        }
+      } catch(e) {}
   };
   const handleSkipTurn = async () => { const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); const nextT = ((gameState.turnIndex||0)+1)%gameState.players.length; await updateDoc(roomRef, {turnIndex:nextT, turnState:'guessing'}); await botSpeak('next'); };
   const handleEndGame = async () => { 
@@ -742,7 +779,19 @@ function OnlineGame({ onSwitchToLocal }) {
 
   const renderInput = () => {
     const myPlayer = gameState.players.find(p => p.id === user.uid);
-    if (!myPlayer) return <div className="flex flex-col justify-center h-full p-4"><div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 text-center space-y-6"><div className="flex justify-center"><div className="bg-orange-100 p-3 rounded-full"><Eye size={32} className="text-orange-500"/></div></div><h2 className="text-2xl font-black text-gray-800">Game in Progress</h2><p className="text-gray-600">You joined late, so you are in <span className="font-bold text-orange-600">Spectator Mode</span>.</p><button onClick={handleLeave} className="w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-xl">Leave Room</button></div></div>;
+    // Spectator View (Joined late)
+    if (!myPlayer) {
+        return (
+            <div className="flex flex-col justify-center h-full p-4">
+                <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
+                    <div className="flex justify-center"><div className="bg-orange-100 p-3 rounded-full"><Eye size={32} className="text-orange-500"/></div></div>
+                    <h2 className="text-2xl font-black text-gray-800">Game in Progress</h2>
+                    <p className="text-gray-600">You joined late, so you are in <span className="font-bold text-orange-600">Spectator Mode</span>.</p><button onClick={handleLeave} className="w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-xl">Leave Room</button>
+                </div>
+            </div>
+        );
+    }
+
     const completedCount = gameState.players.filter(p => p.ready).length;
     const totalCount = gameState.players.length;
     const readyPlayers = gameState.players.filter(p => p.ready);
@@ -779,7 +828,7 @@ function OnlineGame({ onSwitchToLocal }) {
                 <button 
                   onClick={() => {
                     if (completedCount < totalCount) {
-                      if (confirm("Not everyone is ready. Start anyway? Unready players will sit out.")) startGame();
+                      if (confirm("Not everyone is ready. Start anyway? Players who did not submit a secret can still play as guessers.")) startGame();
                     } else {
                       startGame();
                     }
@@ -952,4 +1001,3 @@ export default function App() {
   if (mode === 'local') return <LocalGame onBack={() => setMode('online')} />;
   return <OnlineGame onSwitchToLocal={() => setMode('local')} />;
 }
-
