@@ -46,7 +46,8 @@ import {
   SkipForward,
   Eye,
   Edit2,
-  Power
+  Power,
+  AlertTriangle
 } from 'lucide-react';
 
 // --- Firebase Configuration (StackBlitz Version) ---
@@ -282,7 +283,7 @@ function ChatPanel({ messages, onSendMessage, currentPlayerName, onClose, isMobi
 }
 
 // --- ADMIN COMPONENTS ---
-function AdminModal({ isOpen, onClose, players, onKick, onSkip, onEndGame, currentPhase }) {
+function AdminModal({ isOpen, onClose, players, onKick, onSkip, onEndGame, onCloseRoom, currentPhase }) {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4">
@@ -301,8 +302,12 @@ function AdminModal({ isOpen, onClose, players, onKick, onSkip, onEndGame, curre
                         </button>
                     )}
                     
-                    <button onClick={() => { if(confirm("End game and return to lobby?")) { onEndGame(); onClose(); } }} className="w-full bg-red-100 text-red-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-200">
-                        <Power size={20}/> End Game
+                    <button onClick={() => { if(confirm("End game and return to lobby?")) { onEndGame(); onClose(); } }} className="w-full bg-yellow-100 text-yellow-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-yellow-200">
+                        <RotateCcw size={20}/> End Game (Reset)
+                    </button>
+                    
+                    <button onClick={() => { if(confirm("Close room and kick everyone?")) { onCloseRoom(); onClose(); } }} className="w-full bg-red-100 text-red-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-red-200">
+                        <Power size={20}/> Close Room
                     </button>
                 </div>
 
@@ -316,7 +321,7 @@ function AdminModal({ isOpen, onClose, players, onKick, onSkip, onEndGame, curre
                     ))}
                 </div>
                 
-                <button onClick={onClose} className="w-full bg-gray-200 text-gray-600 font-bold py-3 rounded-xl">Close</button>
+                <button onClick={onClose} className="w-full bg-gray-200 text-gray-600 font-bold py-3 rounded-xl">Close Menu</button>
             </div>
         </div>
     );
@@ -490,7 +495,7 @@ function OnlineGame({ onSwitchToLocal }) {
   const [error, setError] = useState('');
   const [selectedGuessedPlayer, setSelectedGuessedPlayer] = useState(null);
   
-  const [secretInput, setSecretInput] = useState(''); 
+  const [secretInput, setSecretInput] = useState(''); // Added missing state
 
   // Chat State
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -606,11 +611,12 @@ function OnlineGame({ onSwitchToLocal }) {
             if (existingIndex >= 0) {
                  updatedPlayers[existingIndex].name = inputName.trim();
                  let newHostId = data.hostId;
-                 // Self-healing host assignment
                  if (!updatedPlayers.find(p => p.id === data.hostId)) { newHostId = user.uid; }
+                 // Restore kicked status logic if needed
+                 if (updatedPlayers[existingIndex].isKicked) { updatedPlayers[existingIndex].isKicked = false; }
                  await updateDoc(roomRef, { players: updatedPlayers, hostId: newHostId });
             } else {
-                 if (data.phase === 'lobby') {
+                 if (data.phase === 'lobby' || data.phase === 'input') {
                     updatedPlayers.push(newPlayer);
                     let newHostId = data.hostId;
                     if (!updatedPlayers.find(p => p.id === data.hostId)) { newHostId = user.uid; }
@@ -626,24 +632,35 @@ function OnlineGame({ onSwitchToLocal }) {
   
   // Define other handlers...
   const handleLeave = async () => {
-    // If user is HOST, provide option to close room
-    if (gameState?.hostId === user.uid) {
-        if (confirm("Close room and kick everyone?")) {
-            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-            try { await deleteDoc(roomRef); } catch(e) {}
-        } else {
-            return; // Cancel leave
+    // Determine who new host should be if current user is host
+    let newHostId = gameState?.hostId;
+    let shouldDelete = false;
+
+    // Normal leave logic (remove player from list)
+    try {
+        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
+        const currentPlayers = gameState?.players || [];
+        const updatedPlayers = currentPlayers.filter(p => p.id !== user.uid);
+        
+        if (updatedPlayers.length === 0) {
+            shouldDelete = true;
+        } else if (gameState?.hostId === user.uid) {
+            newHostId = updatedPlayers[0].id;
         }
-    } else {
-        // Only remove player if not host (normal leave)
-        try {
-            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-            const currentPlayers = gameState?.players || [];
-            const updatedPlayers = currentPlayers.filter(p => p.id !== user.uid);
-            await updateDoc(roomRef, { players: updatedPlayers });
-        } catch (err) { console.error("Error removing player:", err); }
-    }
+
+        if (shouldDelete) {
+            await deleteDoc(roomRef);
+        } else {
+            await updateDoc(roomRef, { players: updatedPlayers, hostId: newHostId });
+        }
+    } catch (err) { console.error("Error removing player:", err); }
+
     setJoined(false); setGameState(null); setError(''); 
+  };
+
+  const handleCloseRoom = async () => {
+      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
+      try { await deleteDoc(roomRef); } catch(e) {}
   };
   
   const handleKickPlayer = async (pid) => { 
@@ -662,9 +679,6 @@ function OnlineGame({ onSwitchToLocal }) {
       const resetPlayers = gameState.players.map(p => ({ ...p, fact: '', ready: false, isKicked: false }));
       await updateDoc(roomRef, { phase: 'lobby', players: resetPlayers, deck: [], currentCardIndex: 0, turnState: 'guessing', turnIndex: 0, guesserName: '' });
   };
-  
-  const getAISuggestionRef = useRef(null);
-
   const submitFact = async (val) => { if(!gameState) return; const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); const updated = gameState.players.map(p => p.id === user.uid ? { ...p, fact: val, ready: true } : p); await updateDoc(roomRef, { players: updated }); };
   const updateFact = async () => { if(!gameState) return; const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); const updated = gameState.players.map(p => p.id === user.uid ? { ...p, ready: false } : p); await updateDoc(roomRef, { players: updated }); };
   
@@ -719,7 +733,7 @@ function OnlineGame({ onSwitchToLocal }) {
         <div className="space-y-3">
             {!confirmStart ? <button onClick={() => setConfirmStart(true)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-2">Start Sum'n <Play size={20} /></button>
             : <div className="flex gap-2"><button onClick={async () => { const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); if (gameState?.messages?.length === 0) await botSpeak('intro'); await updateDoc(roomRef, { phase: 'input' }); }} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg">Confirm Start</button><button onClick={() => setConfirmStart(false)} className="w-1/3 bg-gray-200 text-gray-600 font-bold py-4 rounded-xl">Wait</button></div>}
-            <button onClick={handleLeave} className="w-full font-bold py-3 rounded-xl border flex items-center justify-center gap-2 bg-white text-gray-500 border-gray-200 hover:bg-gray-50">{gameState?.hostId === user.uid ? <><Trash2 size={18} /> Close Room</> : <><LogOut size={18} /> Leave Room</>}</button>
+            <button onClick={handleLeave} className="w-full font-bold py-3 rounded-xl border flex items-center justify-center gap-2 bg-white text-gray-500 border-gray-200 hover:bg-gray-50">{gameState?.hostId === user.uid ? <><LogOut size={18} /> Leave Room (Pass Host)</> : <><LogOut size={18} /> Leave Room</>}</button>
         </div>
       </div>
     </div>
@@ -728,19 +742,7 @@ function OnlineGame({ onSwitchToLocal }) {
 
   const renderInput = () => {
     const myPlayer = gameState.players.find(p => p.id === user.uid);
-    // Spectator View (Joined late)
-    if (!myPlayer) {
-        return (
-            <div className="flex flex-col justify-center h-full p-4">
-                <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
-                    <div className="flex justify-center"><div className="bg-orange-100 p-3 rounded-full"><Eye size={32} className="text-orange-500"/></div></div>
-                    <h2 className="text-2xl font-black text-gray-800">Game in Progress</h2>
-                    <p className="text-gray-600">You joined late, so you are in <span className="font-bold text-orange-600">Spectator Mode</span>.</p><button onClick={handleLeave} className="w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-xl">Leave Room</button>
-                </div>
-            </div>
-        );
-    }
-
+    if (!myPlayer) return <div className="flex flex-col justify-center h-full p-4"><div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 text-center space-y-6"><div className="flex justify-center"><div className="bg-orange-100 p-3 rounded-full"><Eye size={32} className="text-orange-500"/></div></div><h2 className="text-2xl font-black text-gray-800">Game in Progress</h2><p className="text-gray-600">You joined late, so you are in <span className="font-bold text-orange-600">Spectator Mode</span>.</p><button onClick={handleLeave} className="w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-xl">Leave Room</button></div></div>;
     const completedCount = gameState.players.filter(p => p.ready).length;
     const totalCount = gameState.players.length;
     const readyPlayers = gameState.players.filter(p => p.ready);
@@ -785,7 +787,7 @@ function OnlineGame({ onSwitchToLocal }) {
                   disabled={completedCount < 1} 
                   className={`w-full font-bold py-4 rounded-xl shadow-lg transition active:scale-95 ${completedCount < totalCount ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-green-600 hover:bg-green-700 text-white'} disabled:bg-gray-300 disabled:text-gray-500`}
                 >
-                    {completedCount === totalCount ? "Start Game!" : (completedCount < 1 ? "Waiting for players (Need 1+)" : `Start Game (Force ${totalCount - completedCount} to sit out)`)}
+                    {completedCount === totalCount ? "Start Game!" : (completedCount < 1 ? "Waiting for players..." : `Start Game (Force ${totalCount - completedCount} to sit out)`)}
                 </button>
             )}
             <button onClick={handleLeave} className="w-full bg-white text-gray-500 font-bold py-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition flex items-center justify-center gap-2"><LogOut size={18} /> Leave / Back to Home</button>
@@ -917,8 +919,8 @@ function OnlineGame({ onSwitchToLocal }) {
        {/* LEFT: Game Content */}
        <div className="relative flex-1 h-full overflow-y-auto overflow-x-hidden">
           {content}
-          <AdminButton isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} players={gameState?.players || []} onKick={handleKickPlayer} onSkip={handleSkipTurn} onEndGame={handleEndGame} currentPhase={gameState?.phase} isHost={gameState?.hostId === user?.uid} onClick={() => setIsAdminOpen(true)} />
-          <AdminModal isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} players={gameState?.players || []} onKick={handleKickPlayer} onSkip={handleSkipTurn} onEndGame={handleEndGame} currentPhase={gameState?.phase} />
+          <AdminButton isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} players={gameState?.players || []} onKick={handleKickPlayer} onSkip={handleSkipTurn} onEndGame={handleEndGame} onCloseRoom={handleCloseRoom} currentPhase={gameState?.phase} isHost={gameState?.hostId === user?.uid} onClick={() => setIsAdminOpen(true)} />
+          <AdminModal isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} players={gameState?.players || []} onKick={handleKickPlayer} onSkip={handleSkipTurn} onEndGame={handleEndGame} onCloseRoom={handleCloseRoom} currentPhase={gameState?.phase} />
           {/* Chat Button for Mobile */}
           <div className="md:hidden">
              <button onClick={() => setIsChatOpen(true)} className="fixed bottom-6 right-6 bg-orange-500 text-white p-3 rounded-full shadow-xl hover:bg-orange-600 active:scale-95 z-40 flex items-center justify-center" style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
