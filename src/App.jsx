@@ -328,8 +328,8 @@ function AdminModal({ isOpen, onClose, players, onKick, onSkip, onEndGame, curre
                    <p className="text-xs font-bold text-gray-500 uppercase">Manage Players (Kick)</p>
                    {players.map(p => (
                        <div key={p.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                           <span className="font-bold text-gray-700">{p.name}</span>
-                           <button onClick={() => { if(confirm(`Kick ${p.name}?`)) onKick(p.id); }} className="text-red-500 hover:bg-red-50 p-2 rounded-full"><Trash2 size={18}/></button>
+                           <span className="font-bold text-gray-700">{p.name} {p.isKicked && '(Kicked)'}</span>
+                           {!p.isKicked && <button onClick={() => { if(confirm(`Kick ${p.name}?`)) onKick(p.id); }} className="text-red-500 hover:bg-red-50 p-2 rounded-full"><Trash2 size={18}/></button>}
                        </div>
                    ))}
                </div>
@@ -641,8 +641,9 @@ function OnlineGame({ onSwitchToLocal }) {
            if (existingIndex >= 0) {
                 updatedPlayers[existingIndex].name = inputName.trim();
                 let newHostId = data.hostId;
-                // Self-healing host assignment
                 if (!updatedPlayers.find(p => p.id === data.hostId)) { newHostId = user.uid; }
+                // Restore kicked status logic if needed
+                if (updatedPlayers[existingIndex].isKicked) { updatedPlayers[existingIndex].isKicked = false; }
                 await updateDoc(roomRef, { players: updatedPlayers, hostId: newHostId });
            } else {
                 if (data.phase === 'lobby') {
@@ -660,11 +661,20 @@ function OnlineGame({ onSwitchToLocal }) {
  };
   // Define other handlers...
  const handleLeave = async () => { setJoined(false); setGameState(null); setError(''); };
- const handleKickPlayer = async (pid) => { const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); const updated = gameState.players.filter(p=>p.id!==pid); await updateDoc(roomRef, {players:updated}); };
+ const handleKickPlayer = async (pid) => {
+     const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
+     if (gameState.phase === 'playing') {
+         const updated = gameState.players.map(p => p.id === pid ? { ...p, isKicked: true } : p);
+         await updateDoc(roomRef, {players: updated});
+     } else {
+         const updated = gameState.players.filter(p=>p.id!==pid);
+         await updateDoc(roomRef, {players:updated});
+     }
+ };
  const handleSkipTurn = async () => { const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); const nextT = ((gameState.turnIndex||0)+1)%gameState.players.length; await updateDoc(roomRef, {turnIndex:nextT, turnState:'guessing'}); await botSpeak('next'); };
  const handleEndGame = async () => {
      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase());
-     const resetPlayers = gameState.players.map(p => ({ ...p, fact: '', ready: false }));
+     const resetPlayers = gameState.players.map(p => ({ ...p, fact: '', ready: false, isKicked: false }));
      await updateDoc(roomRef, { phase: 'lobby', players: resetPlayers, deck: [], currentCardIndex: 0, turnState: 'guessing', turnIndex: 0, guesserName: '' });
  };
  const submitFact = async (val) => { if(!gameState) return; const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'sumn_rooms', roomCode.toUpperCase()); const updated = gameState.players.map(p => p.id === user.uid ? { ...p, fact: val, ready: true } : p); await updateDoc(roomRef, { players: updated }); };
@@ -676,6 +686,16 @@ function OnlineGame({ onSwitchToLocal }) {
 
 
  // --- RENDER FUNCTIONS ---
+ const AdminButton = () => {
+     if (gameState?.hostId !== user?.uid) return null;
+     return (
+         <button onClick={() => setIsAdminOpen(true)} className="absolute top-4 left-4 bg-gray-900/10 backdrop-blur-md p-2 rounded-full text-gray-800 z-50 hover:bg-white/40 transition-all shadow-sm border border-black/5" title="Host Settings">
+             <Settings size={24} />
+         </button>
+     );
+ };
+
+
  const renderJoinScreen = () => (
    <div className="flex flex-col justify-center h-full p-4">
      <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8">
@@ -723,7 +743,20 @@ function OnlineGame({ onSwitchToLocal }) {
 
  const renderInput = () => {
    const myPlayer = gameState.players.find(p => p.id === user.uid);
-   if (!myPlayer) return <div className="flex flex-col justify-center h-full p-4"><div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 text-center space-y-6"><div className="flex justify-center"><div className="bg-orange-100 p-3 rounded-full"><Eye size={32} className="text-orange-500"/></div></div><h2 className="text-2xl font-black text-gray-800">Game in Progress</h2><p className="text-gray-600">You joined late, so you are in <span className="font-bold text-orange-600">Spectator Mode</span>.</p><button onClick={handleLeave} className="w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-xl">Leave Room</button></div></div>;
+   // Spectator View (Joined late)
+   if (!myPlayer) {
+       return (
+           <div className="flex flex-col justify-center h-full p-4">
+               <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
+                   <div className="flex justify-center"><div className="bg-orange-100 p-3 rounded-full"><Eye size={32} className="text-orange-500"/></div></div>
+                   <h2 className="text-2xl font-black text-gray-800">Game in Progress</h2>
+                   <p className="text-gray-600">You joined late, so you are in <span className="font-bold text-orange-600">Spectator Mode</span>.</p><button onClick={handleLeave} className="w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-xl">Leave Room</button>
+               </div>
+           </div>
+       );
+   }
+
+
    const completedCount = gameState.players.filter(p => p.ready).length;
    const totalCount = gameState.players.length;
    const readyPlayers = gameState.players.filter(p => p.ready);
@@ -757,7 +790,7 @@ function OnlineGame({ onSwitchToLocal }) {
                    <div><p className="font-bold text-orange-500 mb-1">⏳ Waiting For</p><ul className="text-gray-500 space-y-1">{waitingPlayers.map(p => <li key={p.id}>{p.name} {gameState.hostId === p.id && "(Host)"}</li>)}</ul></div>
                </div>
            </div>
-           {gameState.hostId === user.uid && <button onClick={startGame} disabled={completedCount < 1} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg transition active:scale-95 disabled:bg-gray-300 disabled:text-gray-500">{completedCount === totalCount ? "Start Game!" : (completedCount < 1 ? "Waiting for players..." : `Start Game (Force ${totalCount - completedCount} to sit out)`)}</button>}
+           {gameState.hostId === user.uid && <button onClick={startGame} disabled={completedCount < 1} className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg transition active:scale-95 disabled:bg-gray-300 disabled:text-gray-500">{completedCount === totalCount ? "Start Game!" : (completedCount < 1 ? "Waiting for players (Need 1+)" : `Start Game (Force ${totalCount - completedCount} to sit out)`)}</button>}
            <button onClick={handleLeave} className="w-full bg-white text-gray-500 font-bold py-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition flex items-center justify-center gap-2"><LogOut size={18} /> Leave / Back to Home</button>
        </div>
      </div>
@@ -931,3 +964,4 @@ export default function App() {
  if (mode === 'local') return <LocalGame onBack={() => setMode('online')} />;
  return <OnlineGame onSwitchToLocal={() => setMode('local')} />;
 }
+
